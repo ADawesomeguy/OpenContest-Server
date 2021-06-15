@@ -13,7 +13,15 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         f = open('main.cpp', 'w')
         f.write(program)
         f.close()
-        os.system('g++ main.cpp -o main -O2')
+        ret = os.system('g++ main.cpp -o main -O2')
+
+        if ret:
+            print('Compilation error')
+            os.system('rm main.cpp')
+            self.send_response(500)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            return
 
         tc = 1
         while os.path.isfile(str(tc)+'.in'):
