@@ -26,7 +26,6 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         tc = 1
         prob = 1
         while os.path.isfile(str(prob)+'/'+str(tc)+'.in'):
-            os.system('rm out')
             ret = os.system('timeout 1 ./main < '+str(prob)+'/'+str(tc)+'.in > out')
 
             if ret == 124:
@@ -38,6 +37,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 return
             
             ret = os.system('diff -w out '+str(prob)+'/'+str(tc)+'.out')
+            os.system('rm out')
 
             if ret != 0:
                 print('WA')
