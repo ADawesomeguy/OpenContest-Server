@@ -11,10 +11,12 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         program = post_data[post_data.find('\n\r\n'):post_data.rfind('\n\r\n')]
         print(program)
 
+
         f = open('main.cpp', 'w')
         f.write(program)
         f.close()
 
+        os.system('rm out')
         os.system('g++ main.cpp -o main -O2')
         ret = os.system('timeout 1 ./main < in > out')
 
@@ -22,18 +24,31 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
         if ret == 124:
             print('Timed out')
+
+            self.send_response(408)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
             return
         
         ret = os.system('diff -w out ans')
 
-        if ret == 0:
-            print('AC')
-        else:
+        if ret != 0:
             print('WA')
 
+            self.send_response(406)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            return
+        
+        print('AC')
 
-        # self._set_response()
-        # self.wfile.write("POST request for {}".format(self.path).encode('utf-8'))
+        self.send_response(202)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+
 
 def run(server_class=HTTPServer, handler_class=FileUploadRequestHandler):
     server_address = ('127.0.0.1', 6000)
