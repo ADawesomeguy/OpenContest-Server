@@ -17,6 +17,19 @@ if os.path.isfile('data'):
     data = pickle.load(open('data', 'rb'))
 
 
+# Save verdict and send back result to the client
+def give_verdict(res, server):
+    logging.info(res)
+    data[username].status[prob] = res
+    pickle.dump(data, open('data', 'wb'))
+    
+    os.system('rm main*')
+    
+    server.send_response(res)
+    server.send_header('Access-Control-Allow-Origin', '*')
+    server.end_headers()
+
+
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length']) # Get the size of data
@@ -61,13 +74,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             f.close()
 
         if ret:
-            logging.info('Compilation error')
-            data[username].status[prob] = 500
-            pickle.dump(data, open('data', 'wb'))
-            os.system('rm main*')
-            self.send_response(500)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
+            give_verdict(500)
             return
 
         tc = 1
@@ -78,37 +85,19 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 ret = os.system('timeout 1 python main.py < '+prob+'/'+str(tc)+'.in > out')
 
             if ret == 124:
-                logging.info('Timed out')
-                data[username].status[prob] = 408
-                pickle.dump(data, open('data', 'wb'))
-                os.system('rm main*')
-                self.send_response(408)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
+                give_verdict(408)
                 return
             
             ret = os.system('diff -w out '+prob+'/'+str(tc)+'.out')
             os.system('rm out')
 
             if ret != 0:
-                logging.info('WA')
-                data[username].status[prob] = 406
-                pickle.dump(data, open('data', 'wb'))
-                os.system('rm main*')
-                self.send_response(406)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
+                give_verdict(406)
                 return
             
             tc += 1
         
-        logging.info('AC')
-        data[username].status[prob] = 202
-        pickle.dump(data, open('data', 'wb'))
-        os.system('rm main*')
-        self.send_response(202)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
+        give_verdict(202)
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
