@@ -24,9 +24,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             return
 
         tc = 1
-        while os.path.isfile('1/'+str(tc)+'.in'):
+        prob = 1
+        while os.path.isfile(str(prob)+'/'+str(tc)+'.in'):
             os.system('rm out')
-            ret = os.system('timeout 1 ./main < 1/'+str(tc)+'.in > out')
+            ret = os.system('timeout 1 ./main < '+str(prob)+'/'+str(tc)+'.in > out')
 
             if ret == 124:
                 print('Timed out')
@@ -36,7 +37,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
             
-            ret = os.system('diff -w out '+str(tc)+'.out')
+            ret = os.system('diff -w out '+str(prob)+'/'+str(tc)+'.out')
 
             if ret != 0:
                 print('WA')
@@ -45,6 +46,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 return
+            
+            tc += 1
         
         print('AC')
         os.system('rm main.cpp main')
