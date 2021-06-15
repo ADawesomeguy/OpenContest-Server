@@ -24,7 +24,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             return
 
         tc = 1
-        while os.path.isfile(str(tc)+'.in'):
+        while os.path.isfile('1/'+str(tc)+'.in'):
             os.system('rm out')
             ret = os.system('timeout 1 ./main < 1/'+str(tc)+'.in > out')
 
