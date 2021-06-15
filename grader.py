@@ -17,49 +17,41 @@ if os.path.isfile('data'):
     data = pickle.load(open('data', 'rb'))
 
 
-# Save verdict and send back result to the client
-def give_verdict(res, server):
-    logging.info(res)
-    data[username].status[prob] = res
-    pickle.dump(data, open('data', 'wb'))
-    
-    os.system('rm main*')
-    
-    server.send_response(res)
-    server.send_header('Access-Control-Allow-Origin', '*')
-    server.end_headers()
-
-
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
+    # Find string between left and right in data
+    # Don't shadow the global data var??
+    def parse_data(self, data, left, right):
+        start = data.find(left)
+        end = data.find(right, start)
+        ret = data[start+len(left):end]
+        logging.info(ret)
+        return ret
+
+
+    # Save verdict and send back result to the client
+    def give_verdict(self, res, username, prob):
+        logging.info(res)
+        data[username].status[prob] = res
+        pickle.dump(data, open('data', 'wb'))
+        
+        os.system('rm main*')
+        
+        self.send_response(res)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+
+    # Handle submissions
     def do_POST(self):
         content_length = int(self.headers['Content-Length']) # Get the size of data
         post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
         logging.info(post_data)
 
-        # Refactor this stuff??
-        username_start = post_data.find('username')
-        username_end = post_data.find('\r\n----', username_start)
-        username = post_data[username_start+13:username_end]
-        logging.info(username)
-
-        password_start = post_data.find('password')
-        password_end = post_data.find('\r\n----', password_start)
-        password = post_data[password_start+13:password_end]
-        logging.info(password)
-
-        prob_start = post_data.find('problem')
-        prob_end = post_data.find('\r\n----', prob_start)
-        prob = post_data[prob_start+12:prob_end]
-        logging.info(prob)
-
-        lang_start = post_data.find('Content-Type: ')
-        lang_end = post_data.find('\r\n', lang_start)
-        lang = post_data[lang_start:lang_end].split()[1]
-        logging.info(lang)
-
-        program = post_data[lang_end:post_data.rfind('\r\n----')]
-        logging.info(program)
-        
+        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
+        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
+        prob = self.parse_data(post_data, 'problem\"\r\n\r\n', '\r\n--')
+        lang = self.parse_data(post_data, 'Content-Type: ', '\r\n')
+        program = self.parse_data(post_data, lang, '\r\n--')
 
         # Refactor this especially when adding support for more languages??
         ret = 0
@@ -74,7 +66,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             f.close()
 
         if ret:
-            give_verdict(500)
+            self.give_verdict(500, username, prob)
             return
 
         tc = 1
@@ -85,19 +77,19 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 ret = os.system('timeout 1 python main.py < '+prob+'/'+str(tc)+'.in > out')
 
             if ret == 124:
-                give_verdict(408)
+                self.give_verdict(408, username, prob)
                 return
             
             ret = os.system('diff -w out '+prob+'/'+str(tc)+'.out')
             os.system('rm out')
 
             if ret != 0:
-                give_verdict(406)
+                self.give_verdict(406, username, prob)
                 return
             
             tc += 1
         
-        give_verdict(202)
+        self.give_verdict(202, username, prob)
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
