@@ -11,10 +11,12 @@ logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
 # Hacky database using pickle
 class user:
-    password = 'password'
+    password = str
     status = {str: {}}
+    __init__(self, password):
+        self.password = password
 
-db = {'test': user()}
+db = {str: user}
 
 if os.path.isfile('db'):
     db = pickle.load(open('db', 'rb'))
@@ -54,11 +56,16 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
         password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
 
-        # Implementation TODO
-        self.send_response(406)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-
+        if username in db:
+            self.send_response(406)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+        else:
+            db[username] = user(password)
+            self.send_response(202)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+    
 
     # Process a submission
     def process_submission(self, post_data):
