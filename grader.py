@@ -13,13 +13,42 @@ logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 class user:
     password = str
     status = {str: {}}
-    __init__(self, password):
+    def __init__(self, password):
         self.password = password
 
 db = {str: user}
 
 if os.path.isfile('db'):
     db = pickle.load(open('db', 'rb'))
+
+
+class language:
+    extension = str
+    cmd = str
+    compile_cmd = str
+    def __init__(self, extension, cmd, compile_cmd=''):
+        self.extension = extension
+        self.cmd = cmd
+        self.compile_cmd = compile_cmd
+
+
+languages = {
+    'text/x-c++src': language('cpp', './main', 'g++ main.cpp -o main -O2'),
+    'text/x-python': language('py', 'python main.py'),
+    'text/x-java': language('java', 'java main', 'javac main.java'),
+    'text/x-csrc': language('c', './main', 'gcc main.c -o main -O2'),
+    'text/x-csharp': language('cs', 'csc main.cs -out:main.exe', 'mono main.exe'),
+    'application/javascript': language('js', 'nodejs main.js'),
+    'application/x-ruby': language('rb', 'ruby main.ruby'),
+    'application/x-perl': language('pl', 'perl main.pl'),
+    'application/x-php': language('php', 'php main.php'),
+    'text/x-go': language('go', './main', 'go build main.go'),
+    'text/x-rust': language('rs', 'rust main.rs'),
+    'text/x-kotlin': language('kt', 'kotlin main', 'kotlinc main.kt'),
+    'text/x-lua': language('lua', 'lua main.lua'),
+    'text/x-common-lisp': language('lisp', 'ecl --load main.lisp'),
+    'text/x-shellscript': language('sh', './main.sh', 'chmod +x main.sh')
+}
 
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
@@ -75,32 +104,23 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         problem = self.parse_data(post_data, 'problem\"\r\n\r\n', '\r\n--')
         lang = self.parse_data(post_data, 'Content-Type: ', '\r\n')
         program = self.parse_data(post_data, lang, '\r\n--')
+        
+        # Save the program
+        f = open('main.'+languages[lang].extension, 'w')
+        f.write(program)
+        f.close()
 
-        # Refactor this especially when adding support for more languages??
-        ret = 0
-        if lang == 'text/x-c++src':
-            f = open('main.cpp', 'w')
-            f.write(program)
-            f.close()
-            ret = os.system('g++ main.cpp -o main -O2')
-        elif lang == 'text/x-python':
-            f = open('main.py', 'w')
-            f.write(program)
-            f.close()
-
-        if ret:
-            self.give_verdict(500, username, prob)
-            return
+        # Compile the code if needed
+        if languages[lang].compile_cmd != '':
+            ret = os.system(languages[lang].compile_cmd)
+            if ret:
+                self.give_verdict(500, username, prob)
+                return
 
         tc = 1
         tcdir = contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
-            if lang == 'text/x-c++src':
-                cmd = './main'
-            elif lang == 'text/x-python':
-                cmd = 'python main.py'
-            
-            ret = os.system('timeout 1 '+cmd+' < '+tcdir+str(tc)+'.in > out')
+            ret = os.system('timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
 
             if ret == 124:
                 self.give_verdict(408, username, contest, problem)
