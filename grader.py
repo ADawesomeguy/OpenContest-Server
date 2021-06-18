@@ -5,21 +5,23 @@ import os
 import logging
 import pickle
 
+
 logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
+
+# Hacky database using pickle
 class user:
     password = 'password'
-    status = {}
+    status = {str: {}}
 
-data = {'test': user()}
+db = {'test': user()}
 
-if os.path.isfile('data'):
-    data = pickle.load(open('data', 'rb'))
+if os.path.isfile('db'):
+    db = pickle.load(open('db', 'rb'))
 
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
     # Find string between left and right in data
-    # Don't shadow the global data var??
     def parse_data(self, data, left, right):
         start = data.find(left)
         end = data.find(right, start)
@@ -29,10 +31,14 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
 
     # Save verdict and send back result to the client
-    def give_verdict(self, res, username, prob):
+    def give_verdict(self, res, username, contest, problem):
         logging.info(res)
-        data[username].status[prob] = res
-        pickle.dump(data, open('data', 'wb'))
+
+        # Save to database
+        if contest not in db[username].status:
+            db[username].status[contest] = {}
+        db[username].status[contest][problem] = res
+        pickle.dump(db, open('db', 'wb'))
         
         os.system('rm main*')
         
@@ -41,15 +47,25 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
-    # Handle submissions
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length']) # Get the size of data
-        post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
-        logging.info(post_data)
-
+    # Process user/team registrations
+    def process_registration(self, post_data):
+        names = self.parse_data(post_data, 'names\"\r\n\r\n', '\r\n--')
+        emails = self.parse_data(post_data, 'emails\"\r\n\r\n', '\r\n--')
         username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
         password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
-        prob = self.parse_data(post_data, 'problem\"\r\n\r\n', '\r\n--')
+
+        # Implementation TODO
+        self.send_response(406)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+
+    # Process a submission
+    def process_submission(self, post_data):
+        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
+        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
+        contest = self.parse_data(post_data, 'contest\"\r\n\r\n', '\r\n--')
+        problem = self.parse_data(post_data, 'problem\"\r\n\r\n', '\r\n--')
         lang = self.parse_data(post_data, 'Content-Type: ', '\r\n')
         program = self.parse_data(post_data, lang, '\r\n--')
 
@@ -70,26 +86,61 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             return
 
         tc = 1
-        while os.path.isfile(str(prob)+'/'+str(tc)+'.in'):
+        tcdir = contest+'/'+problem+'/'
+        while os.path.isfile(tcdir+str(tc)+'.in'):
             if lang == 'text/x-c++src':
-                ret = os.system('timeout 1 ./main < '+prob+'/'+str(tc)+'.in > out')
+                cmd = './main'
             elif lang == 'text/x-python':
-                ret = os.system('timeout 1 python main.py < '+prob+'/'+str(tc)+'.in > out')
+                cmd = 'python main.py'
+            
+            ret = os.system('timeout 1 '+cmd+' < '+tcdir+str(tc)+'.in > out')
 
             if ret == 124:
-                self.give_verdict(408, username, prob)
+                self.give_verdict(408, username, contest, problem)
                 return
             
-            ret = os.system('diff -w out '+prob+'/'+str(tc)+'.out')
+            ret = os.system('diff -w out '+tcdir+str(tc)+'.out')
             os.system('rm out')
 
             if ret != 0:
-                self.give_verdict(406, username, prob)
+                self.give_verdict(406, username, contest, problem)
                 return
             
             tc += 1
         
-        self.give_verdict(202, username, prob)
+        self.give_verdict(202, username, contest, problem)
+    
+
+    # Process status queries
+    def proccess_status(self, post_data):
+        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
+        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
+        contest = self.parse_data(post_data, 'contest\"\r\n\r\n', '\r\n--')
+
+        # Implementation TODO
+        self.send_response(406)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+
+    # Handle LGP POST requests
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length']) # Get the size of data
+        post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
+        logging.info(post_data)
+
+        request_type = self.parse_data(post_data, 'type\"\r\n\r\n', '\r\n--')
+        if request_type == 'registration':
+            self.process_registration(post_data)
+        elif request_type == 'submission':
+            self.process_submission(post_data)
+        elif request_type == 'query':
+            self.process_submission(post_data)
+        else:
+            # invalid POST
+            self.send_response(404)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
