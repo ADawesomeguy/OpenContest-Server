@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
 import logging
 import pickle
-from json import loads as parse_data
+
 
 logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
@@ -21,7 +21,6 @@ class user:
         self.emails = emails
         self.username = usernames
         self.password = password
-
 
 db = {str: user}
 
@@ -59,8 +58,16 @@ languages = {
 
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
-    # Save verdict and send back result to the client
+    # Find string between left and right in data
+    def parse_data(self, data, left, right):
+        start = data.find(left)
+        end = data.find(right, start)
+        ret = data[start+len(left):end]
+        logging.info(ret)
+        return ret
 
+
+    # Save verdict and send back result to the client
     def give_verdict(self, res, username, contest, problem):
         logging.info(res)
 
@@ -69,21 +76,20 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             db[username].status[contest] = {}
         db[username].status[contest][problem] = res
         pickle.dump(db, open('db', 'wb'))
-
+        
         os.system('rm main*')
-
+        
         self.send_response(res)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
-    # Process user/team registrations
 
+    # Process user/team registrations
     def process_registration(self, post_data):
-        post_data = parse_data(post_data)
-        names = post_data['names']
-        emails = post_data['emails']
-        username = post_data['username']
-        password = post_data['password']
+        names = self.parse_data(post_data, 'names\"\r\n\r\n', '\r\n--')
+        emails = self.parse_data(post_data, 'emails\"\r\n\r\n', '\r\n--')
+        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
+        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
 
         if username in db:
             self.send_response(406)
@@ -94,9 +100,9 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_response(202)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
+    
 
     # Process a submission
-
     def process_submission(self, post_data):
         username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
         password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
@@ -141,41 +147,37 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 # Wrong answer
                 self.give_vNo erdict(406, username, contest, problem)
                 return
-
+            
             tc += 1
         
         # All correct!
         self.give_verdict(202, username, contest, problem)
+    
 
     # Process status queries
-
     def proccess_status(self, post_data):
-        post_data = parse_data(post_data)
-        username = post_data['username']
-        password = post_data['password']
-        contest = post_data['contest']
+        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
+        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
+        contest = self.parse_data(post_data, 'contest\"\r\n\r\n', '\r\n--')
 
         # Implementation TODO
         self.send_response(406)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
-    # Handle LGP POST requests
 
+    # Handle LGP POST requests
     def do_POST(self):
-        # Get the size of data
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length).decode(
-            'ascii')  # Get the data itself
+        content_length = int(self.headers['Content-Length']) # Get the size of data
+        post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
         logging.info(post_data)
 
-        # self.parse_data(post_data, 'type\"\r\n\r\n', '\r\n--')
-        request_type = self.path
-        if request_type == '/registration':
+        request_type = self.parse_data(post_data, 'type\"\r\n\r\n', '\r\n--')
+        if request_type == 'registration':
             self.process_registration(post_data)
-        elif request_type == '/submission':
+        elif request_type == 'submission':
             self.process_submission(post_data)
-        elif request_type == '/query':
+        elif request_type == 'query':
             self.process_submission(post_data)
         else:
             # invalid POST
@@ -191,3 +193,4 @@ def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler
 
 
 run()
+
