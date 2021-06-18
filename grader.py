@@ -145,7 +145,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             
             if ret != 0:
                 # Wrong answer
-                self.give_vNo erdict(406, username, contest, problem)
+                self.give_verdict(406, username, contest, problem)
                 return
             
             tc += 1
