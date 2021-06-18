@@ -43,7 +43,7 @@ languages = {
     'application/x-perl': language('pl', 'perl main.pl'),
     'application/x-php': language('php', 'php main.php'),
     'text/x-go': language('go', './main', 'go build main.go'),
-    'text/x-rust': language('rs', 'rust main.rs'),
+    'text/x-rust': language('rs', './main', 'rustc main.rs'),
     'text/x-kotlin': language('kt', 'kotlin main', 'kotlinc main.kt'),
     'text/x-lua': language('lua', 'lua main.lua'),
     'text/x-common-lisp': language('lisp', 'ecl --load main.lisp'),
