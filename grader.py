@@ -19,7 +19,7 @@ class user:
     def __init__(self, names, emails, username, password):
         self.names = names
         self.emails = emails
-        self.username = usernames
+        self.username = username
         self.password = password
 
 db = {str: user}
@@ -72,10 +72,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         logging.info(res)
 
         # Save to database
-        if contest not in db[username].status:
-            db[username].status[contest] = {}
-        db[username].status[contest][problem] = res
-        pickle.dump(db, open('db', 'wb'))
+        if username in db:
+            if contest not in db[username].status:
+                db[username].status[contest] = {}
+            db[username].status[contest][problem] = res
+            pickle.dump(db, open('db', 'wb'))
         
         os.system('rm main*')
         
