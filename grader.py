@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
 import logging
 import pickle
-
+from json import loads as parse_data
 
 logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
@@ -16,52 +16,16 @@ class user:
     def __init__(self, password):
         self.password = password
 
+
 db = {str: user}
 
 if os.path.isfile('db'):
     db = pickle.load(open('db', 'rb'))
 
 
-class language:
-    extension = str
-    cmd = str
-    compile_cmd = str
-    def __init__(self, extension, cmd, compile_cmd=''):
-        self.extension = extension
-        self.cmd = cmd
-        self.compile_cmd = compile_cmd
-
-
-languages = {
-    'text/x-c++src': language('cpp', './main', 'g++ main.cpp -o main -O2'),
-    'text/x-python': language('py', 'python main.py'),
-    'text/x-java': language('java', 'java main', 'javac main.java'),
-    'text/x-csrc': language('c', './main', 'gcc main.c -o main -O2'),
-    'text/x-csharp': language('cs', 'csc main.cs -out:main.exe', 'mono main.exe'),
-    'application/javascript': language('js', 'nodejs main.js'),
-    'application/x-ruby': language('rb', 'ruby main.ruby'),
-    'application/x-perl': language('pl', 'perl main.pl'),
-    'application/x-php': language('php', 'php main.php'),
-    'text/x-go': language('go', './main', 'go build main.go'),
-    'text/x-rust': language('rs', './main', 'rustc main.rs'),
-    'text/x-kotlin': language('kt', 'kotlin main', 'kotlinc main.kt'),
-    'text/x-lua': language('lua', 'lua main.lua'),
-    'text/x-common-lisp': language('lisp', 'ecl --load main.lisp'),
-    'text/x-shellscript': language('sh', './main.sh', 'chmod +x main.sh')
-}
-
-
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
-    # Find string between left and right in data
-    def parse_data(self, data, left, right):
-        start = data.find(left)
-        end = data.find(right, start)
-        ret = data[start+len(left):end]
-        logging.info(ret)
-        return ret
-
-
     # Save verdict and send back result to the client
+
     def give_verdict(self, res, username, contest, problem):
         logging.info(res)
 
@@ -70,20 +34,21 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             db[username].status[contest] = {}
         db[username].status[contest][problem] = res
         pickle.dump(db, open('db', 'wb'))
-        
+
         os.system('rm main*')
-        
+
         self.send_response(res)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
-
     # Process user/team registrations
+
     def process_registration(self, post_data):
-        names = self.parse_data(post_data, 'names\"\r\n\r\n', '\r\n--')
-        emails = self.parse_data(post_data, 'emails\"\r\n\r\n', '\r\n--')
-        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
-        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
+        post_data = parse_data(post_data)
+        names = post_data['names']
+        emails = post_data['emails']
+        username = post_data['username']
+        password = post_data['password']
 
         if username in db:
             self.send_response(406)
@@ -94,74 +59,88 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_response(202)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-    
 
     # Process a submission
-    def process_submission(self, post_data):
-        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
-        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
-        contest = self.parse_data(post_data, 'contest\"\r\n\r\n', '\r\n--')
-        problem = self.parse_data(post_data, 'problem\"\r\n\r\n', '\r\n--')
-        lang = self.parse_data(post_data, 'Content-Type: ', '\r\n')
-        program = self.parse_data(post_data, lang, '\r\n--')
-        
-        # Save the program
-        f = open('main.'+languages[lang].extension, 'w')
-        f.write(program)
-        f.close()
 
-        # Compile the code if needed
-        if languages[lang].compile_cmd != '':
-            ret = os.system(languages[lang].compile_cmd)
-            if ret:
-                self.give_verdict(500, username, prob)
-                return
+    def process_submission(self, post_data):
+        post_data = parse_data(post_data)
+        username = post_data['username']
+        password = post_data['password']
+        contest = post_data['contest']
+        problem = post_data['problem']
+        lang = post_data['lang']
+        program = post_data['program']
+
+        # Refactor this especially when adding support for more languages??
+        ret = 0
+        if lang == 'text/x-c++src':
+            f = open('main.cpp', 'w')
+            f.write(program)
+            f.close()
+            ret = os.system('g++ main.cpp -o main -O2')
+        elif lang == 'text/x-python':
+            f = open('main.py', 'w')
+            f.write(program)
+            f.close()
+
+        if ret:
+            self.give_verdict(500, username, problem)
+            return
 
         tc = 1
         tcdir = contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
-            ret = os.system('timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
+            if lang == 'text/x-c++src':
+                cmd = './main'
+            elif lang == 'text/x-python':
+                cmd = 'python main.py'
+
+            ret = os.system('timeout 1 '+cmd+' < '+tcdir+str(tc)+'.in > out')
 
             if ret == 124:
                 self.give_verdict(408, username, contest, problem)
                 return
-            
+
             ret = os.system('diff -w out '+tcdir+str(tc)+'.out')
             os.system('rm out')
 
             if ret != 0:
                 self.give_verdict(406, username, contest, problem)
                 return
-            
+
             tc += 1
-        
+
         self.give_verdict(202, username, contest, problem)
-    
 
     # Process status queries
+
     def proccess_status(self, post_data):
-        username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
-        password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
-        contest = self.parse_data(post_data, 'contest\"\r\n\r\n', '\r\n--')
+        post_data = parse_data(post_data)
+        username = post_data['username']
+        password = post_data['password']
+        contest = post_data['contest']
 
         # Implementation TODO
         self.send_response(406)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
-
     # Handle LGP POST requests
+
     def do_POST(self):
-        content_length = int(self.headers['Content-Length']) # Get the size of data
-        post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
+        # Get the size of data
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length).decode(
+            'ascii')  # Get the data itself
         logging.info(post_data)
 
-        request_type = self.parse_data(post_data, 'type\"\r\n\r\n', '\r\n--')
-        if request_type == 'registration':
+        # self.parse_data(post_data, 'type\"\r\n\r\n', '\r\n--')
+        request_type = self.path
+        if request_type == '/registration':
             self.process_registration(post_data)
-        elif request_type == 'submission':
+        elif request_type == '/submission':
             self.process_submission(post_data)
-        elif request_type == 'query':
+        elif request_type == '/query':
             self.process_submission(post_data)
         else:
             # invalid POST
@@ -177,4 +156,3 @@ def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler
 
 
 run()
-
