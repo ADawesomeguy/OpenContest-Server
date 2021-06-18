@@ -13,7 +13,7 @@ logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 class user:
     password = str
     status = {str: {}}
-    __init__(self, password):
+    def __init__(self, password):
         self.password = password
 
 
