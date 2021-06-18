@@ -11,9 +11,15 @@ logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
 # Hacky database using pickle
 class user:
+    names = str
+    emails = str
+    username = str
     password = str
     status = {str: {}}
-    def __init__(self, password):
+    def __init__(self, names, emails, username, password):
+        self.names = names
+        self.emails = emails
+        self.username = usernames
         self.password = password
 
 db = {str: user}
@@ -90,7 +96,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
         else:
-            db[username] = user(password)
+            db[username] = user(names, emails, username, password)
             self.send_response(202)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
@@ -104,6 +110,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         problem = self.parse_data(post_data, 'problem\"\r\n\r\n', '\r\n--')
         lang = self.parse_data(post_data, 'Content-Type: ', '\r\n')
         program = self.parse_data(post_data, lang, '\r\n--')
+
+        # Check if username and password are valid
+        if username not in db or db[username].password != password:
+            self.give_verdict(500, username, contest, problem)
+            return
         
         # Save the program
         f = open('main.'+languages[lang].extension, 'w')
@@ -114,27 +125,32 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if languages[lang].compile_cmd != '':
             ret = os.system(languages[lang].compile_cmd)
             if ret:
-                self.give_verdict(500, username, prob)
+                self.give_verdict(500, username, contest, problem)
                 return
 
         tc = 1
         tcdir = contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
+            # Run test case
             ret = os.system('timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
-
-            if ret == 124:
+            
+            if ret != 0:
+                # Runtime error
                 self.give_verdict(408, username, contest, problem)
                 return
             
+            # Diff the output with the answer
             ret = os.system('diff -w out '+tcdir+str(tc)+'.out')
             os.system('rm out')
-
+            
             if ret != 0:
+                # Wrong answer
                 self.give_verdict(406, username, contest, problem)
                 return
             
             tc += 1
         
+        # All correct!
         self.give_verdict(202, username, contest, problem)
     
 
