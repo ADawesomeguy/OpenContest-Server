@@ -76,7 +76,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if contest not in db[username].status:
             db[username].status[contest] = {}
         db[username].status[contest][problem] = res
-        pickle.dump(db, open('db', 'wb'))
+        
+        f = open('db', 'wb')
+        pickle.dump(db, f)
+        f.close()
         
         os.system('rm main*')
         
@@ -99,7 +102,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
         else:
             db[username] = user(names, emails, username, password)
-            pickle.dump(db, open('db', 'wb'))
+            
+            f = open('db', 'wb')
+            pickle.dump(db, f)
+            f.close()
 
             self.send_response(201)
             self.send_header('Access-Control-Allow-Origin', '*')
