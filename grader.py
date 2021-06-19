@@ -11,16 +11,13 @@ logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
 # Hacky database using pickle
 class user:
-    names = str
-    emails = str
-    username = str
-    password = str
-    status = {str: {}}
     def __init__(self, names, emails, username, password):
         self.names = names
         self.emails = emails
         self.username = username
         self.password = password
+        self.status = {}
+
 
 db = {str: user}
 
@@ -29,9 +26,6 @@ if os.path.isfile('db'):
 
 
 class language:
-    extension = str
-    cmd = str
-    compile_cmd = str
     def __init__(self, extension, cmd, compile_cmd=''):
         self.extension = extension
         self.cmd = cmd
@@ -77,9 +71,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             db[username].status[contest] = {}
         db[username].status[contest][problem] = res
         
-        f = open('db', 'wb')
-        pickle.dump(db, f)
-        f.close()
+        with open('db', 'wb') as f:
+            pickle.dump(db, f)
         
         os.system('rm main*')
         
@@ -103,9 +96,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         else:
             db[username] = user(names, emails, username, password)
             
-            f = open('db', 'wb')
-            pickle.dump(db, f)
-            f.close()
+            with open('db', 'wb') as f:
+                pickle.dump(db, f)
 
             self.send_response(201)
             self.send_header('Access-Control-Allow-Origin', '*')
