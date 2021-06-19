@@ -150,7 +150,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
             os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
-            ret = os.system(sandbox+'"timeout 1 ~/tmp/'+languages[lang].cmd+' < ~/tmp/in > ~/tmp/out"')
+            ret = os.system(sandbox+'"cd ~/tmp; timeout 1 '+languages[lang].cmd+' < in > out"')
             os.system('rm ~/tmp/in')
 
             if ret != 0:
