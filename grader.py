@@ -172,8 +172,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        logging.info(db[username].status.get(contest))
-        status = str(db[username].status.get(contest)).encode('utf-8')
+        if contest not in db[username].status:
+            status = 'No problems solved'.encode('utf-8')
+        else:
+            status = str(db[username].status[contest]).encode('utf-8')
+        logging.info(status)
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-Length', len(status))
