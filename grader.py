@@ -4,7 +4,13 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
 import logging
 import pickle
+import argparse
 
+
+parser = argparse.ArgumentParser(description='Reference backend implementation for the LGP protocol')
+parser.add_argument('-p', '--port', default=6000, help='which port to run the server on', type=int)
+parser.add_argument('-s', '--sandbox', default='firejail', help='which sandboxing program to use', type=str)
+args = parser.parse_args()
 
 logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
@@ -125,9 +131,15 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         f.write(program)
         f.close()
 
+        # Sandboxing program
+        if args.sandbox == 'firejail':
+            sandbox = 'firejail --profile=firejail.profile --private-cwd=~/git/grader '
+        else:
+            sandbox = ''
+
         # Compile the code if needed
         if languages[lang].compile_cmd != '':
-            ret = os.system(languages[lang].compile_cmd)
+            ret = os.system(sandbox+languages[lang].compile_cmd)
             if ret:
                 self.give_verdict(500, username, contest, problem)
                 return
@@ -136,7 +148,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         tcdir = contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
-            ret = os.system('timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
+            ret = os.system(sandbox+'timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
             
             if ret != 0:
                 # Runtime error
@@ -204,7 +216,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
-    server_address = ('127.0.0.1', 6000)
+    server_address = ('127.0.0.1', args.port)
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
 
