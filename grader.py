@@ -80,7 +80,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         with open('db', 'wb') as f:
             pickle.dump(db, f)
         
-        os.system('rm main*')
+        os.system('rm ~/tmp -rf')
         
         self.send_response(res)
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -130,16 +130,17 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         f = open('main.'+languages[lang].extension, 'w')
         f.write(program)
         f.close()
+        os.system('mkdir ~/tmp; mv main* ~/tmp')
 
         # Sandboxing program
         if args.sandbox == 'firejail':
-            sandbox = 'firejail --profile=firejail.profile --private-cwd=~/git/grader '
+            sandbox = 'firejail --profile=firejail.profile bash -c '
         else:
             sandbox = ''
 
         # Compile the code if needed
         if languages[lang].compile_cmd != '':
-            ret = os.system(sandbox+languages[lang].compile_cmd)
+            ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
             if ret:
                 self.give_verdict(500, username, contest, problem)
                 return
@@ -148,16 +149,18 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         tcdir = contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
-            ret = os.system(sandbox+'timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
-            
+            os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
+            ret = os.system(sandbox+'"timeout 1 ~/tmp/'+languages[lang].cmd+' < ~/tmp/in > ~/tmp/out"')
+            os.system('rm ~/tmp/in')
+
             if ret != 0:
                 # Runtime error
                 self.give_verdict(408, username, contest, problem)
                 return
             
             # Diff the output with the answer
-            ret = os.system('diff -w out '+tcdir+str(tc)+'.out')
-            os.system('rm out')
+            ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
+            os.system('rm ~/tmp/out')
             
             if ret != 0:
                 # Wrong answer

@@ -25,8 +25,8 @@ include disable-programs.inc
 
 # apparmor
 caps.drop all
-ipc-namespace
-machine-id
+# ipc-namespace
+# machine-id
 net none
 netfilter
 no3d
@@ -40,19 +40,19 @@ nou2f
 novideo
 protocol unix,inet,inet6
 seccomp
-shell none
+# shell none
 # tracelog
 
 # disable-mnt
 # private
 # private-bin program
-private-cache
-private-dev
+# private-cache
+# private-dev
 # see /usr/share/doc/firejail/profile.template for more common private-etc paths.
 # private-etc alternatives,fonts,machine-id
 # private-lib
-private-opt none
-private-tmp
+# private-opt none
+# private-tmp
 
 dbus-user none
 dbus-system none
@@ -60,7 +60,4 @@ dbus-system none
 # memory-deny-write-execute
 # read-only ${HOME}
 
-blacklist *
-read-only ~/git/grader/*/*.in
-whitelist ~/git/grader/out
-whitelist ~/git/grader/main*
+whitelist ${HOME}/tmp
