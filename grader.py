@@ -72,11 +72,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         logging.info(res)
 
         # Save to database
-        if username in db:
-            if contest not in db[username].status:
-                db[username].status[contest] = {}
-            db[username].status[contest][problem] = res
-            pickle.dump(db, open('db', 'wb'))
+        global db
+        if contest not in db[username].status:
+            db[username].status[contest] = {}
+        db[username].status[contest][problem] = res
+        pickle.dump(db, open('db', 'wb'))
         
         os.system('rm main*')
         
@@ -92,13 +92,16 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
         password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
 
+        global db
         if username in db:
-            self.send_response(406)
+            self.send_response(418)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
         else:
             db[username] = user(names, emails, username, password)
-            self.send_response(202)
+            pickle.dump(db, open('db', 'wb'))
+
+            self.send_response(201)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
     
@@ -114,7 +117,9 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
         # Check if username and password are valid
         if username not in db or db[username].password != password:
-            self.give_verdict(500, username, contest, problem)
+            self.send_response(404)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
             return
         
         # Save the program
@@ -156,15 +161,25 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     
 
     # Process status queries
-    def proccess_status(self, post_data):
+    def process_status(self, post_data):
         username = self.parse_data(post_data, 'username\"\r\n\r\n', '\r\n--')
         password = self.parse_data(post_data, 'password\"\r\n\r\n', '\r\n--')
         contest = self.parse_data(post_data, 'contest\"\r\n\r\n', '\r\n--')
 
-        # Implementation TODO
-        self.send_response(406)
+        if username not in db or db[username].password != password:
+            self.send_response(404)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            return
+
+        logging.info(db[username].status.get(contest))
+        status = str(db[username].status.get(contest)).encode('utf-8')
+        self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-Length', len(status))
+        self.send_header('Contest-Type', 'text/html')
         self.end_headers()
+        self.wfile.write(status)
 
 
     # Handle LGP POST requests
@@ -178,11 +193,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.process_registration(post_data)
         elif request_type == 'submission':
             self.process_submission(post_data)
-        elif request_type == 'query':
-            self.process_submission(post_data)
+        elif request_type == 'status':
+            self.process_status(post_data)
         else:
             # invalid POST
-            self.send_response(404)
+            self.send_response(501)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
 
