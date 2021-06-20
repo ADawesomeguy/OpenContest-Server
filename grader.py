@@ -136,7 +136,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if args.sandbox == 'firejail':
             sandbox = 'firejail --profile=firejail.profile bash -c '
         else:
-            sandbox = ''
+            sandbox = 'bash -c '
 
         # Compile the code if needed
         if languages[lang].compile_cmd != '':
