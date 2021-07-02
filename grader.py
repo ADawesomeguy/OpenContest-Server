@@ -273,6 +273,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers',
                          'X-Requested-With, Content-Type')
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
     # Handle LGP POST requests
@@ -315,5 +316,6 @@ parser.add_argument('-p', '--port', default=7789,
 parser.add_argument('-s', '--sandbox', default='firejail',
                     help='which sandboxing program to use', type=str)
 args = parser.parse_args()
+
 
 run()
