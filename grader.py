@@ -1,12 +1,23 @@
 #!/usr/bin/python3
 
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
+import logging
 import argparse
 import sqlite3
-from operator import itemgetter
-from json import loads, dumps
-import jwt
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from email.parser import BytesParser
+
+
+parser = argparse.ArgumentParser(
+    description='Reference backend implementation for the LGP protocol')
+parser.add_argument('-p', '--port', default=6000,
+                    help='which port to run the server on', type=int)
+parser.add_argument('-s', '--sandbox', default='firejail',
+                    help='which sandboxing program to use', type=str)
+args = parser.parse_args()
+
+
+logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
 
 
 class language:
@@ -35,122 +46,60 @@ languages = {
 }
 
 
+# Prepare db
 con = sqlite3.connect('db')
 cur = con.cursor()
-cur.execute('''CREATE TABLE users
-            (names text, emails text, username text, password text)''')
-for 
+# Create user table
+cur.execute('CREATE TABLE IF NOT EXISTS users (names text, emails text, username text, password text)')
+for contest in os.listdir('contests'):
+    # Create contest status table
+    command = 'CREATE TABLE IF NOT EXISTS '+contest+'_status ('
+    for problem in os.listdir('contests/'+contest):
+        command += 'P'+problem+' text, '
+    command = command[:-2]+')'
+    cur.execute(command)
+    # Create contest submissions table
+    cur.execute('CREATE TABLE IF NOT EXISTS '+contest+'_submissions (number real, username text, code text, verdict real)')
+# Save changes to db
 con.commit()
 
 
-def process_registration(self, data):  # Process user/team registrations
-    try:
-        username, password = itemgetter('username', 'password')(data)
-        if db.users.find_one({'username': username}):  # ensure unique username
-            self.send_response(409)
-        else:  # initialize new user
-            user = {'username': username, 'password': password, 'name': [
-            ], 'emails': [], 'status': {}}  # TODO: hash password, add salt
-            db.users.insert_one(user)
-            self.send_response(201)
-    except Exception:
-        self.send_error(400)
-    self.send_header('Access-Control-Allow-Origin', '*')
-    self.end_headers()
-
-
-def process_status(self, data):  # Process status queries
-    status = {}
-    try:
-        username, contest = itemgetter('username', 'contest')(data)
-        user = db.users.find_one({'username': username})
-        if user:
-            if contest in user['status']:
-                status = user['status'][user['contest']]
-            self.send_response(200)
-        else:
-            self.send_error(404)
-    except Exception:
-        self.send_error(400)
-    self.send_header('Access-Control-Allow-Origin', '*')
-    self.send_header('Content-type', 'text/html')
-    self.end_headers()
-    self.wfile.write(dumps(status).encode('utf-8'))
-
-
-def authenticate_user(username, password):  # Verify username and password
-    user = db.users.find_one({'username': username})
-    return user and password == user['password']
-
-
-def authenticate_token(username, token):  # TODO: authenticate user token
-    return True
-
-
-def process_login(self, data):
-    username, password = itemgetter('username', 'password')(data)
-    process_login(self, username, password)
-
-
-def process_login(self, username, password):  # TODO: Login and return token
-    status = ''
-    if authenticate_user(username, password):
-        self.send_response(202)
-        status = 'TODO: generate login token'
-    else:
-        self.send_response(501)
-    self.send_header('Access-Control-Allow-Origin', '*')
-    self.send_header('Content-type', 'text/html')
-    self.end_headers()
-    self.wfile.write(dumps(status).encode('utf-8'))
-
-
-# def compile_program(lang, program):
-#     # Save the program
-#     with open('main.'+languages[lang].extension, 'w') as f:
-#         f.write(program)
-#     os.system('mkdir ~/tmp; mv main* ~/tmp')
-
-#     # Sandbox program
-#     if args.sandbox == 'firejail':
-#         sandbox = 'firejail --profile=firejail.profile bash -c '
-#     else:
-#         sandbox = 'bash -c '
-
-#     # Compile the code if needed
-#     if languages[lang].compile_cmd != '':
-#         ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
-#         if ret:
-#             self.give_verdict(500, username, contest, problem)
-#             return
-
-#     tc = 1
-#     tcdir = contest+'/'+problem+'/'
-#     while os.path.isfile(tcdir+str(tc)+'.in'):
-#         # Run test case
-#         os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
-#         ret = os.system(sandbox+'"cd ~/tmp; timeout 1 ' +
-#                         languages[lang].cmd+' < in > out"')
-#         os.system('rm ~/tmp/in')
-
-#         if ret != 0:
-#                 # Runtime error
-#                 self.give_verdict(408, username, contest, problem)
-#                 return
-
-#             # Diff the output with the answer
-#             ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
-#             os.system('rm ~/tmp/out')
-
-#             if ret != 0:
-#                 # Wrong answer
-#                 self.give_verdict(406, username, contest, problem)
-#                 return
-
-#             tc += 1
-
-
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
+    # Send back a status code with no body
+    def send_code(self, code):
+        self.send_response(code)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+    # Send back a response body
+    def send_body(self, body):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-Length', len(body))
+        self.send_header('Contest-Type', 'text/html')
+        self.end_headers()
+        self.wfile.write(body)
+
+    # Return info about server
+    def about(self, data):
+        about = open('about', 'r').read()
+        self.send_body(about)
+    
+    # Return contests on this server
+    def contests(self, data):
+        contests = ''
+        for contest in os.listdir('contests'):
+            contests += contest+'\n'
+        self.send_body(contests)
+    
+    # Register a new user
+    def register(self, data):
+        pass
+
+    # Return information about a contest
+    def info(self, data):
+        pass
+
     # Save verdict and send back result to the client
     def give_verdict(self, res, username, contest, problem):
         db.users.find_one_and_update({'username': username}, {
@@ -158,12 +107,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         print(db.users.find_one({'username': username}))
         os.system('rm -rf ~/tmp')
 
-        self.send_response(res)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
+        self.send_code(res)
 
     # Process a submission
-    def process_submission(self, data):
+    def submit(self, data):
         try:
             print(data)
             username, token, contest, problem, lang, program = itemgetter(
@@ -220,63 +167,59 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_error(400)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
+    
+    # Return user status
+    def status(self, data):
+        pass
 
-    def parse_data(self):
-        # Get the size of data
-        content_length = int(self.headers['Content-Length'])
-        return loads(self.rfile.read(content_length).decode(
-            'ascii'))  # Get the data itself
-
-    def do_OPTIONS(self):
-        print(self.path)
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers',
-                         'X-Requested-With, Content-Type')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
+    # Return user submission history
+    def history(self, data):
+        pass
+    
+    # Return the code for a particular submission
+    def code(self, data):
+        pass
 
     # Handle LGP POST requests
     def do_POST(self):
-        path, data = self.path, self.parse_data()
+        content_length = int(self.headers['Content-Length']) # Get the size of data
+        post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
+        logging.info(post_data)
 
-        if path == '/user/register':
-            process_registration(self, data)
-        elif path == '/submit':
-            self.process_submission(data)
-        else:  # invalid POST
-            self.send_response(400)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
+        idx = -1
+        data = {}
+        # Clean up this?
+        while post_data.find('Content-Disposition', idx+1) != -1:
+            idx = post_data.find('Content-Disposition', idx+1)
+            key_start = post_data.find('"', idx)+1
+            key_end = post_data.find('"', key_start)
+            key = post_data[key_start:key_end]
+            if not key == 'file':
+                value_start = post_data.find('\r\n', key_end)+4
+                value_end = post_data.find('\r\n--', value_start)
+                value = post_data[value_start:value_end]
+            else:
+                lang_start = key_end+17
+                lang_end = post_data.find('\r\n', lang_start)
+                lang = post_data[lang_start:lang_end]
+                code_start = lang_end+4
+                code_end = post_data.find('\r\n--', code_start)
+                code = post_data[code_start:code_end]
+                value = (lang, code)
+            data[key] = value
+        logging.info(data)
 
-    # Handle LGP GET requests
-    def do_GET(self):
-        path, data = self.path, self.parse_data()
-
-        if path == '/user/login':
-            process_login(self, data)
-        elif path == '/status':
-            process_status(self, data)
-        else:  # invalid GET
-            self.send_response(400)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
+        try:
+            request = 'self.'+data['type']+'(data)'
+            eval(request)
+        except:
+            self.send_code(501)
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
-    server_address = ('localhost', args.port)  # 127.0.0.1
+    server_address = ('localhost', args.port)
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
-
-
-parser = argparse.ArgumentParser(
-    description='Reference backend implementation for the LGP protocol')
-parser.add_argument('-p', '--port', default=7789,
-                    help='which port to run the server on', type=int)
-parser.add_argument('-s', '--sandbox', default='firejail',
-                    help='which sandboxing program to use', type=str)
-args = parser.parse_args()
 
 
 run()
