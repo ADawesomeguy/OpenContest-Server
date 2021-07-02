@@ -7,6 +7,8 @@ Reference backend implementation for the [LGP protocol](https://github.com/Ladue
 
 It is highly recommended to put this server behind a reverse proxy like nginx because HTTPServer does not implement any security features.
 
+The 
+
 Also, you must run this server with a sandboxing program. Currently, only Firejail is supported. Although it is possible to run this program without any sandboxing at all, it is extremely dangerous.
 
 ```
