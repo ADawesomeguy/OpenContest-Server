@@ -8,12 +8,9 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from email.parser import BytesParser
 
 
-parser = argparse.ArgumentParser(
-    description='Reference backend implementation for the LGP protocol')
-parser.add_argument('-p', '--port', default=6000,
-                    help='which port to run the server on', type=int)
-parser.add_argument('-s', '--sandbox', default='firejail',
-                    help='which sandboxing program to use', type=str)
+parser = argparse.ArgumentParser(description='Reference backend implementation for the LGP protocol')
+parser.add_argument('-p', '--port', default=6000, help='which port to run the server on', type=int)
+parser.add_argument('-s', '--sandbox', default='firejail', help='which sandboxing program to use', type=str)
 args = parser.parse_args()
 
 
@@ -80,6 +77,18 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    # Save verdict and send back result to the client
+    def verdict(self, data):
+        cur.execute('INSERT INTO '+data['contest']+'_submissions'+' VALUES ('+data[''])
+        os.system('rm -rf ~/tmp')
+
+        self.send_code(res)
+    
+    # Authenticate user
+    def authenticate(self, data):
+        users = cur.execute('SELECT * FROM users WHERE username = ?', data['username']).fetchall()
+        return len(users) == 1 and users[0][3] == data['password']
+
     # Return info about server
     def about(self, data):
         about = open('about', 'r').read()
@@ -94,91 +103,81 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     
     # Register a new user
     def register(self, data):
-        pass
-
+        if len(cur.execute('SELECT FROM users WHERE username="'+data['username']+'"').fetchall()):
+            self.send_code(409)
+            return
+        cur.execute('INSERT INTO users VALUES ("'+data['names']+'","'+data['emails']+'","'+data['username']+'","'+data['password']+'")')
+        con.commit()
+        self.send_code(201)
+        
     # Return information about a contest
     def info(self, data):
-        pass
-
-    # Save verdict and send back result to the client
-    def give_verdict(self, res, username, contest, problem):
-        db.users.find_one_and_update({'username': username}, {
-                                     '$set': {'status.%s.%s' % (contest, problem): res}})
-        print(db.users.find_one({'username': username}))
-        os.system('rm -rf ~/tmp')
-
-        self.send_code(res)
+        if not os.exists('contests/'+data['contest']):
+            self.send_code(404)
+            return
+        info = open('contests/'+data['contest']+'/info', 'r').read()
+        self.send_body(info)
 
     # Process a submission
     def submit(self, data):
-        try:
-            print(data)
-            username, token, contest, problem, lang, program = itemgetter(
-                'username', 'token', 'contest', 'problem', 'lang', 'program')(data)
+        if not self.authenticate(data):
+            self.send_code(404)
 
-            if authenticate_token(username, token):
-                # Save the program
-                with open('./main.'+languages[lang].extension, 'w') as f:
-                    f.write(program)
-                os.system('mkdir ~/tmp; mv main* ~/tmp')
-                # Sandboxing program
-                if args.sandbox == 'firejail':
-                    sandbox = 'firejail --profile=firejail.profile bash -c '
-                else:
-                    sandbox = 'bash -c '
+        # Save the program
+        with open('./main.'+languages[lang].extension, 'w') as f:
+            f.write(program)
+        os.system('mkdir ~/tmp; mv main* ~/tmp')
+        # Sandboxing program
+        if args.sandbox == 'firejail':
+            sandbox = 'firejail --profile=firejail.profile bash -c '
+        else:
+            sandbox = 'bash -c '
 
-                # Compile the code if needed
-                if languages[lang].compile_cmd != '':
-                    ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
-                    if ret:
-                        self.give_verdict(500, username, contest, problem)
-                        return
+        # Compile the code if needed
+        if languages[lang].compile_cmd != '':
+            ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
+            if ret:
+                self.verdict(500, data)
+                return
 
-                tc = 1
-                tcdir = contest+'/'+problem+'/'
-                while os.path.isfile(tcdir+str(tc)+'.in'):
-                    # Run test case
-                    os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
-                    ret = os.system(sandbox+'"cd ~/tmp; timeout 1 ' +
-                                    languages[lang].cmd+' < in > out"')
-                    os.system('rm ~/tmp/in')
+        tc = 1
+        tcdir = contest+'/'+problem+'/'
+        while os.path.isfile(tcdir+str(tc)+'.in'):
+            # Run test case
+            os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
+            ret = os.system(sandbox+'"cd ~/tmp; timeout 1 '+languages[lang].cmd+' < in > out"')
+            os.system('rm ~/tmp/in')
 
-                    if ret != 0:
-                        # Runtime error
-                        self.give_verdict(408, username, contest, problem)
-                        return
+            if ret != 0:
+                self.verdict(408, data) # Runtime error
+                return
 
-                    # Diff the output with the answer
-                    ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
-                    os.system('rm ~/tmp/out')
+            # Diff the output with the answer
+            ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
+            os.system('rm ~/tmp/out')
 
-                    if ret != 0:
-                        # Wrong answer
-                        self.give_verdict(406, username, contest, problem)
-                        return
+            if ret != 0:
+                self.verdict(406, data) # Wrong answer
+                return
 
-                    tc += 1
+            tc += 1
 
-                # All correct!
-                self.give_verdict(202, username, contest, problem)
-            else:
-                self.send_response(401)
-        except Exception:
-            self.send_error(400)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
+        self.verdict(202, data) # All correct!
     
     # Return user status
     def status(self, data):
-        pass
+        if not self.authenticate(data):
+            self.send_code(404)
 
     # Return user submission history
     def history(self, data):
-        pass
+        if not self.authenticate(data):
+            self.send_code(404)
     
     # Return the code for a particular submission
     def code(self, data):
-        pass
+        if not self.authenticate(data):
+            self.send_code(404)
 
     # Handle LGP POST requests
     def do_POST(self):
@@ -188,32 +187,28 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
         idx = -1
         data = {}
-        # Clean up this?
         while post_data.find('Content-Disposition', idx+1) != -1:
             idx = post_data.find('Content-Disposition', idx+1)
             key_start = post_data.find('"', idx)+1
             key_end = post_data.find('"', key_start)
-            key = post_data[key_start:key_end]
-            if not key == 'file':
+            if not post_data[key_start:key_end] == 'file':
                 value_start = post_data.find('\r\n', key_end)+4
                 value_end = post_data.find('\r\n--', value_start)
-                value = post_data[value_start:value_end]
+                data[post_data[key_start:key_end]] = post_data[value_start:value_end]
             else:
                 lang_start = key_end+17
                 lang_end = post_data.find('\r\n', lang_start)
-                lang = post_data[lang_start:lang_end]
+                data['lang'] = post_data[lang_start:lang_end]
                 code_start = lang_end+4
                 code_end = post_data.find('\r\n--', code_start)
-                code = post_data[code_start:code_end]
-                value = (lang, code)
-            data[key] = value
+                data['code'] = post_data[code_start:code_end]
         logging.info(data)
 
         try:
             request = 'self.'+data['type']+'(data)'
             eval(request)
         except:
-            self.send_code(501)
+            self.send_code(500)
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
