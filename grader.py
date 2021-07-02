@@ -3,7 +3,7 @@
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
 import argparse
-from pymongo import MongoClient
+import sqlite3
 from operator import itemgetter
 from json import loads, dumps
 import jwt
@@ -18,7 +18,7 @@ class language:
 
 languages = {
     'text/x-c++src': language('cpp', './main', 'g++ main.cpp -o main -O2'),
-    'text/x-python-script': language('py', 'python main.py'),
+    'text/x-python': language('py', 'python main.py'),
     'text/x-java': language('java', 'java main', 'javac main.java'),
     'text/x-csrc': language('c', './main', 'gcc main.c -o main -O2'),
     'text/x-csharp': language('cs', 'csc main.cs -out:main.exe', 'mono main.exe'),
@@ -34,52 +34,13 @@ languages = {
     'text/x-shellscript': language('sh', './main.sh', 'chmod +x main.sh')
 }
 
-db = MongoClient(port=27017).laduecs
 
-# set user schema
-db.users.validator = {
-    '$jsonSchema': {
-        'type': 'object',
-        'additionalProperties': False,
-        'required': ['_id', 'username', 'password', 'names', 'emails', 'status'],
-        'properties': {
-            '_id': {'bsonType': 'objectId'},
-            'username': {
-                'bsonType': 'string',
-                'minLength': 3,
-                'maxLength': 16
-            },
-            'password': {
-                'bsonType': 'string'
-            },
-            'names': {
-                'bsonType': 'array',
-                'items': {
-                    'bsonType': 'string',
-                    'minLength': 1,
-                    'maxLength': 60
-                }
-            },
-            'emails': {
-                'bsonType': 'array',
-                'items': {
-                    'bsonType': 'string',
-                    'minLength': 5,
-                    'maxLength': 255
-                }
-            },
-            'status': {
-                'bsonType': 'object',
-                'additionalProperties': {
-                    'bsonType': 'object',
-                    'additionalProperties': {
-                        'bsonType': 'int',
-                    }
-                }
-            }
-        }
-    }
-}
+con = sqlite3.connect('db')
+cur = con.cursor()
+cur.execute('''CREATE TABLE users
+            (names text, emails text, username text, password text)''')
+for 
+con.commit()
 
 
 def process_registration(self, data):  # Process user/team registrations

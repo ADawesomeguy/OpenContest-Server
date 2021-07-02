@@ -1,9 +1,8 @@
+# Custom
+db
+contests
 .DS_Store
 
-
-# Custom
-*
-!*.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
