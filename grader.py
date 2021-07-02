@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!-/usr/bin/python3
 
 import os
 import logging
@@ -50,7 +50,7 @@ cur = con.cursor()
 cur.execute('CREATE TABLE IF NOT EXISTS users (names text, emails text, username text, password text)')
 for contest in os.listdir('contests'):
     # Create contest status table
-    command = 'CREATE TABLE IF NOT EXISTS '+contest+'_status ('
+    command = 'CREATE TABLE IF NOT EXISTS '+contest+'_status (username text, '
     for problem in os.listdir('contests/'+contest):
         command += 'P'+problem+' text, '
     command = command[:-2]+')'
@@ -68,6 +68,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
+
     # Send back a response body
     def send_body(self, body):
         self.send_response(200)
@@ -77,23 +78,30 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+
     # Save verdict and send back result to the client
-    def verdict(self, data):
-        cur.execute('INSERT INTO '+data['contest']+'_submissions'+' VALUES ('+data[''])
-        os.system('rm -rf ~/tmp')
+    def verdict(self, data, ver):
+        num = cur.execute('SELECT Count(*) FROM '+data['contest']+'_submissions').fetchone()
+        cur.execute('INSERT INTO '+data['contest']+'_submissions'+' VALUES (? ? ? ?)', (num, data['username'], data['code'], ver))
+        con.commit()
+
+        os.system('rm -rf ~/tmp') # Clean up ~/tmp
 
         self.send_code(res)
     
+
     # Authenticate user
     def authenticate(self, data):
         users = cur.execute('SELECT * FROM users WHERE username = ?', data['username']).fetchall()
         return len(users) == 1 and users[0][3] == data['password']
 
+
     # Return info about server
     def about(self, data):
         about = open('about', 'r').read()
         self.send_body(about)
-    
+
+
     # Return contests on this server
     def contests(self, data):
         contests = ''
@@ -101,6 +109,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             contests += contest+'\n'
         self.send_body(contests)
     
+
     # Register a new user
     def register(self, data):
         if len(cur.execute('SELECT FROM users WHERE username="'+data['username']+'"').fetchall()):
@@ -109,7 +118,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         cur.execute('INSERT INTO users VALUES ("'+data['names']+'","'+data['emails']+'","'+data['username']+'","'+data['password']+'")')
         con.commit()
         self.send_code(201)
-        
+    
+
     # Return information about a contest
     def info(self, data):
         if not os.exists('contests/'+data['contest']):
@@ -118,9 +128,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         info = open('contests/'+data['contest']+'/info', 'r').read()
         self.send_body(info)
 
+
     # Process a submission
     def submit(self, data):
-        if not self.authenticate(data):
+        if not self.authenticate(data) or data['contest'] not in os.listdir('contests') or data['problem'] not in os.listdir('contests/'+data['contest']):
             self.send_code(404)
 
         # Save the program
@@ -137,11 +148,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if languages[lang].compile_cmd != '':
             ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
             if ret:
-                self.verdict(500, data)
+                self.verdict(data, 500)
                 return
 
         tc = 1
-        tcdir = contest+'/'+problem+'/'
+        tcdir = 'contests/'+contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
             os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
@@ -149,7 +160,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             os.system('rm ~/tmp/in')
 
             if ret != 0:
-                self.verdict(408, data) # Runtime error
+                self.verdict(data, 408) # Runtime error
                 return
 
             # Diff the output with the answer
@@ -157,27 +168,41 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             os.system('rm ~/tmp/out')
 
             if ret != 0:
-                self.verdict(406, data) # Wrong answer
+                self.verdict(data, 406) # Wrong answer
                 return
 
             tc += 1
 
-        self.verdict(202, data) # All correct!
+        self.verdict(data, 202) # All correct!
     
+
     # Return user status
     def status(self, data):
-        if not self.authenticate(data):
+        if not self.authenticate(data) or data['contest'] not in os.listdir('contests'):
             self.send_code(404)
+        
+        status = cur.execute('SELECT FROM '+data['contest']+'_status WHERE username = ?', data['username']).fetchall()
+        self.send_body(status)
+    
 
     # Return user submission history
     def history(self, data):
-        if not self.authenticate(data):
+        if not self.authenticate(data) or data['contest'] not in os.listdir('contests'):
             self.send_code(404)
+
+        history = cur.execute('SELECT FROM '+data['contest']+'_submissions WHERE username = ?', data['username']).fetchall()
+        self.send_body(history)
+
     
     # Return the code for a particular submission
     def code(self, data):
-        if not self.authenticate(data):
+        if not self.authenticate(data) or data['contest'] not in os.listdir('contests'):
             self.send_code(404)
+        
+        code = cur.execute('SELECT FROM '+data['contest']+'_submssions WHERE username = ? AND number = ?', (data['username'], data['number'])).fetchall()
+        self.send_body(history)
+        
+
 
     # Handle LGP POST requests
     def do_POST(self):
