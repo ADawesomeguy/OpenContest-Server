@@ -2,31 +2,14 @@
 
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
-import logging
-import pickle
-from json import loads as parse_data
-
-logging.basicConfig(filename='log', encoding='utf-8', level=logging.INFO)
-
-
-# Hacky database using pickle
-class user:
-    password = str
-    status = {str: {}}
-    def __init__(self, password):
-        self.password = password
-
-
-db = {str: user}
-
-if os.path.isfile('db'):
-    db = pickle.load(open('db', 'rb'))
+import argparse
+from pymongo import MongoClient
+from operator import itemgetter
+from json import loads, dumps
+import jwt
 
 
 class language:
-    extension = str
-    cmd = str
-    compile_cmd = str
     def __init__(self, extension, cmd, compile_cmd=''):
         self.extension = extension
         self.cmd = cmd
@@ -35,7 +18,7 @@ class language:
 
 languages = {
     'text/x-c++src': language('cpp', './main', 'g++ main.cpp -o main -O2'),
-    'text/x-python': language('py', 'python main.py'),
+    'text/x-python-script': language('py', 'python main.py'),
     'text/x-java': language('java', 'java main', 'javac main.java'),
     'text/x-csrc': language('c', './main', 'gcc main.c -o main -O2'),
     'text/x-csharp': language('cs', 'csc main.cs -out:main.exe', 'mono main.exe'),
@@ -51,128 +34,288 @@ languages = {
     'text/x-shellscript': language('sh', './main.sh', 'chmod +x main.sh')
 }
 
+db = MongoClient(port=27017).laduecs
+
+# set user schema
+db.users.validator = {
+    '$jsonSchema': {
+        'type': 'object',
+        'additionalProperties': False,
+        'required': ['_id', 'username', 'password', 'names', 'emails', 'status'],
+        'properties': {
+            '_id': {'bsonType': 'objectId'},
+            'username': {
+                'bsonType': 'string',
+                'minLength': 3,
+                'maxLength': 16
+            },
+            'password': {
+                'bsonType': 'string'
+            },
+            'names': {
+                'bsonType': 'array',
+                'items': {
+                    'bsonType': 'string',
+                    'minLength': 1,
+                    'maxLength': 60
+                }
+            },
+            'emails': {
+                'bsonType': 'array',
+                'items': {
+                    'bsonType': 'string',
+                    'minLength': 5,
+                    'maxLength': 255
+                }
+            },
+            'status': {
+                'bsonType': 'object',
+                'additionalProperties': {
+                    'bsonType': 'object',
+                    'additionalProperties': {
+                        'bsonType': 'int',
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+def process_registration(self, data):  # Process user/team registrations
+    try:
+        username, password = itemgetter('username', 'password')(data)
+        if db.users.find_one({'username': username}):  # ensure unique username
+            self.send_response(409)
+        else:  # initialize new user
+            user = {'username': username, 'password': password, 'name': [
+            ], 'emails': [], 'status': {}}  # TODO: hash password, add salt
+            db.users.insert_one(user)
+            self.send_response(201)
+    except Exception:
+        self.send_error(400)
+    self.send_header('Access-Control-Allow-Origin', '*')
+    self.end_headers()
+
+
+def process_status(self, data):  # Process status queries
+    status = {}
+    try:
+        username, contest = itemgetter('username', 'contest')(data)
+        user = db.users.find_one({'username': username})
+        if user:
+            if contest in user['status']:
+                status = user['status'][user['contest']]
+            self.send_response(200)
+        else:
+            self.send_error(404)
+    except Exception:
+        self.send_error(400)
+    self.send_header('Access-Control-Allow-Origin', '*')
+    self.send_header('Content-type', 'text/html')
+    self.end_headers()
+    self.wfile.write(dumps(status).encode('utf-8'))
+
+
+def authenticate_user(username, password):  # Verify username and password
+    user = db.users.find_one({'username': username})
+    return user and password == user['password']
+
+
+def authenticate_token(username, token):  # TODO: authenticate user token
+    return True
+
+
+def process_login(self, data):
+    username, password = itemgetter('username', 'password')(data)
+    process_login(self, username, password)
+
+
+def process_login(self, username, password):  # TODO: Login and return token
+    status = ''
+    if authenticate_user(username, password):
+        self.send_response(202)
+        status = 'TODO: generate login token'
+    else:
+        self.send_response(501)
+    self.send_header('Access-Control-Allow-Origin', '*')
+    self.send_header('Content-type', 'text/html')
+    self.end_headers()
+    self.wfile.write(dumps(status).encode('utf-8'))
+
+
+# def compile_program(lang, program):
+#     # Save the program
+#     with open('main.'+languages[lang].extension, 'w') as f:
+#         f.write(program)
+#     os.system('mkdir ~/tmp; mv main* ~/tmp')
+
+#     # Sandbox program
+#     if args.sandbox == 'firejail':
+#         sandbox = 'firejail --profile=firejail.profile bash -c '
+#     else:
+#         sandbox = 'bash -c '
+
+#     # Compile the code if needed
+#     if languages[lang].compile_cmd != '':
+#         ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
+#         if ret:
+#             self.give_verdict(500, username, contest, problem)
+#             return
+
+#     tc = 1
+#     tcdir = contest+'/'+problem+'/'
+#     while os.path.isfile(tcdir+str(tc)+'.in'):
+#         # Run test case
+#         os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
+#         ret = os.system(sandbox+'"cd ~/tmp; timeout 1 ' +
+#                         languages[lang].cmd+' < in > out"')
+#         os.system('rm ~/tmp/in')
+
+#         if ret != 0:
+#                 # Runtime error
+#                 self.give_verdict(408, username, contest, problem)
+#                 return
+
+#             # Diff the output with the answer
+#             ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
+#             os.system('rm ~/tmp/out')
+
+#             if ret != 0:
+#                 # Wrong answer
+#                 self.give_verdict(406, username, contest, problem)
+#                 return
+
+#             tc += 1
+
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
     # Save verdict and send back result to the client
-
     def give_verdict(self, res, username, contest, problem):
-        logging.info(res)
-
-        # Save to database
-        if contest not in db[username].status:
-            db[username].status[contest] = {}
-        db[username].status[contest][problem] = res
-        pickle.dump(db, open('db', 'wb'))
-
-        os.system('rm main*')
+        db.users.find_one_and_update({'username': username}, {
+                                     '$set': {'status.%s.%s' % (contest, problem): res}})
+        print(db.users.find_one({'username': username}))
+        os.system('rm -rf ~/tmp')
 
         self.send_response(res)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
-    # Process user/team registrations
-
-    def process_registration(self, post_data):
-        post_data = parse_data(post_data)
-        names = post_data['names']
-        emails = post_data['emails']
-        username = post_data['username']
-        password = post_data['password']
-
-        if username in db:
-            self.send_response(406)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-        else:
-            db[username] = user(password)
-            self.send_response(202)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-
     # Process a submission
+    def process_submission(self, data):
+        try:
+            print(data)
+            username, token, contest, problem, lang, program = itemgetter(
+                'username', 'token', 'contest', 'problem', 'lang', 'program')(data)
 
-    def process_submission(self, post_data):
-        post_data = parse_data(post_data)
-        username = post_data['username']
-        password = post_data['password']
-        contest = post_data['contest']
-        problem = post_data['problem']
-        lang = post_data['lang']
-        program = post_data['program']
+            if authenticate_token(username, token):
+                # Save the program
+                with open('./main.'+languages[lang].extension, 'w') as f:
+                    f.write(program)
+                os.system('mkdir ~/tmp; mv main* ~/tmp')
+                # Sandboxing program
+                if args.sandbox == 'firejail':
+                    sandbox = 'firejail --profile=firejail.profile bash -c '
+                else:
+                    sandbox = 'bash -c '
 
-         # Save the program
-        f = open('main.'+languages[lang].extension, 'w')
-        f.write(program)
-        f.close()
+                # Compile the code if needed
+                if languages[lang].compile_cmd != '':
+                    ret = os.system('cd ~/tmp && '+languages[lang].compile_cmd)
+                    if ret:
+                        self.give_verdict(500, username, contest, problem)
+                        return
 
-        # Compile the code if needed
-        if languages[lang].compile_cmd != '':
-            ret = os.system(languages[lang].compile_cmd)
-            if ret:
-                self.give_verdict(500, username, prob)
-                return
+                tc = 1
+                tcdir = contest+'/'+problem+'/'
+                while os.path.isfile(tcdir+str(tc)+'.in'):
+                    # Run test case
+                    os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
+                    ret = os.system(sandbox+'"cd ~/tmp; timeout 1 ' +
+                                    languages[lang].cmd+' < in > out"')
+                    os.system('rm ~/tmp/in')
 
-        tc = 1
-        tcdir = contest+'/'+problem+'/'
-        while os.path.isfile(tcdir+str(tc)+'.in'):
-            ret = os.system('timeout 1 '+languages[lang].cmd+' < '+tcdir+str(tc)+'.in > out')
+                    if ret != 0:
+                        # Runtime error
+                        self.give_verdict(408, username, contest, problem)
+                        return
 
-            if ret == 124:
-                self.give_verdict(408, username, contest, problem)
-                return
+                    # Diff the output with the answer
+                    ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
+                    os.system('rm ~/tmp/out')
 
-            ret = os.system('diff -w out '+tcdir+str(tc)+'.out')
-            os.system('rm out')
+                    if ret != 0:
+                        # Wrong answer
+                        self.give_verdict(406, username, contest, problem)
+                        return
 
-            if ret != 0:
-                self.give_verdict(406, username, contest, problem)
-                return
+                    tc += 1
 
-            tc += 1
+                # All correct!
+                self.give_verdict(202, username, contest, problem)
+            else:
+                self.send_response(401)
+        except Exception:
+            self.send_error(400)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
 
-        self.give_verdict(202, username, contest, problem)
+    def parse_data(self):
+        # Get the size of data
+        content_length = int(self.headers['Content-Length'])
+        return loads(self.rfile.read(content_length).decode(
+            'ascii'))  # Get the data itself
 
-    # Process status queries
-
-    def proccess_status(self, post_data):
-        post_data = parse_data(post_data)
-        username = post_data['username']
-        password = post_data['password']
-        contest = post_data['contest']
-
-        # Implementation TODO
-        self.send_response(406)
+    def do_OPTIONS(self):
+        print(self.path)
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers',
+                         'X-Requested-With, Content-Type')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
 
     # Handle LGP POST requests
-
     def do_POST(self):
-        # Get the size of data
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length).decode(
-            'ascii')  # Get the data itself
-        logging.info(post_data)
+        path, data = self.path, self.parse_data()
 
-        # self.parse_data(post_data, 'type\"\r\n\r\n', '\r\n--')
-        request_type = self.path
-        if request_type == '/registration':
-            self.process_registration(post_data)
-        elif request_type == '/submission':
-            self.process_submission(post_data)
-        elif request_type == '/query':
-            self.process_submission(post_data)
-        else:
-            # invalid POST
-            self.send_response(404)
+        if path == '/user/register':
+            process_registration(self, data)
+        elif path == '/submit':
+            self.process_submission(data)
+        else:  # invalid POST
+            self.send_response(400)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+
+    # Handle LGP GET requests
+    def do_GET(self):
+        path, data = self.path, self.parse_data()
+
+        if path == '/user/login':
+            process_login(self, data)
+        elif path == '/status':
+            process_status(self, data)
+        else:  # invalid GET
+            self.send_response(400)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
-    server_address = ('127.0.0.1', 6000)
+    server_address = ('localhost', args.port)  # 127.0.0.1
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
+
+
+parser = argparse.ArgumentParser(
+    description='Reference backend implementation for the LGP protocol')
+parser.add_argument('-p', '--port', default=7789,
+                    help='which port to run the server on', type=int)
+parser.add_argument('-s', '--sandbox', default='firejail',
+                    help='which sandboxing program to use', type=str)
+args = parser.parse_args()
 
 
 run()
