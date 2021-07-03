@@ -1,7 +1,7 @@
 # Custom
 contests
-db
 log
+db*
 .DS_Store
 
 
