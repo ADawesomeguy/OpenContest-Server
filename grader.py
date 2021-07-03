@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 
 #logging.basicConfig(filename='log', level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 class language:
@@ -52,7 +52,7 @@ for contest in os.listdir('contests'):
     # Create contest status table
     command = 'CREATE TABLE IF NOT EXISTS '+contest+'_status (username text, '
     for problem in os.listdir('contests/'+contest):
-        if os.path.isfile('contests/'+contest+'/'+problem): continue
+        if os.path.isfile('contests/'+contest+'/'+problem) or problem.startswith('.'): continue
         command += 'P'+problem+' text, '
     command = command[:-2]+')'
     cur.execute(command)
@@ -72,13 +72,15 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
     # Send back a response body
     def send_body(self, body):
-        logging.info(body)
+        if type(body) == str:
+            logging.info(body)
+            body = str.encode(body)
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Content-Length', str(len(str.encode(body))))
+        self.send_header('Content-Length', str(len(body)))
         self.send_header('Contest-Type', 'text/html')
         self.end_headers()
-        self.wfile.write(str.encode(body))
+        self.wfile.write(body)
 
 
     # Save verdict and send back result to the client
@@ -138,7 +140,16 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if not os.path.isdir('contests/'+data['contest']):
             self.send_code(404)
             return
-        info = open('contests/'+data['contest']+'/info', 'r').read()
+        info = open('contests/'+data['contest']+'/README.md', 'r').read()
+        self.send_body(info)
+    
+
+    # Return the problems statements for a contest
+    def problems(self, data):
+        if not os.path.isdir('contests/'+data['contest']):
+            self.send_code(404)
+            return
+        info = open('contests/'+data['contest']+'/problems.pdf', 'rb').read()
         self.send_body(info)
 
 
@@ -152,10 +163,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             f.write(data['code'])
         os.system('mkdir ~/tmp; mv main* ~/tmp')
         # Sandboxing program
-        if args.sandbox == 'firejail':
-            sandbox = 'firejail --profile=firejail.profile bash -c '
-        else:
-            sandbox = 'bash -c '
+        if args.sandbox == 'firejail': sandbox = 'firejail --profile=firejail.profile bash -c '
+        else: sandbox = 'bash -c ' # Dummy sandbox
 
         # Compile the code if needed
         if languages[data['lang']].compile_cmd != '':
@@ -164,14 +173,12 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 self.verdict(data, 500)
                 return
 
-        tc = 1
-        tcdir = 'contests/'+contest+'/'+problem+'/'
+        tc,tcdir = 1,'contests/'+contest+'/'+problem+'/'
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
             os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
             ret = os.system(sandbox+'"cd ~/tmp; timeout 1 '+languages[data['lang']].cmd+' < in > out"')
             os.system('rm ~/tmp/in')
-
             if ret != 0:
                 self.verdict(data, 408) # Runtime error
                 return
@@ -179,11 +186,9 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             # Diff the output with the answer
             ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
             os.system('rm ~/tmp/out')
-
             if ret != 0:
                 self.verdict(data, 406) # Wrong answer
                 return
-
             tc += 1
 
         self.verdict(data, 202) # All correct!
@@ -193,7 +198,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     def status(self, data):
         if not self.authenticate(data) or data['contest'] not in os.listdir('contests'):
             self.send_code(404)
-        
+            return
         status = cur.execute('SELECT * FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchall()
         self.send_body(str(status))
     
@@ -202,9 +207,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     def history(self, data):
         if not self.authenticate(data) or data['contest'] not in os.listdir('contests'):
             self.send_code(404)
-
-        # Don't send submission code?
-        history = cur.execute('SELECT * FROM '+data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
+            return
+        history = cur.execute('SELECT "number","problem","verdict" FROM '+data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
         self.send_body(str(history))
 
     
@@ -212,9 +216,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     def code(self, data):
         if not self.authenticate(data) or data['contest'] not in os.listdir('contests'):
             self.send_code(404)
-        
-        # Only send code?
-        code = cur.execute('SELECT * FROM '+data['contest']+'_submissions WHERE username = ? AND number = ?', (data['username'], data['number'])).fetchall()
+            return
+        code = cur.execute('SELECT "code" FROM '+data['contest']+'_submissions WHERE username = ? AND number = ?', (data['username'], data['number'])).fetchone()[0]
         self.send_body(str(code))
 
 
@@ -224,8 +227,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
         logging.info(post_data)
 
-        idx = -1
-        data = {}
+        idx,data = -1,{}
         # Debug this! Not very robust!
         while post_data.find('Content-Disposition', idx+1) != -1:
             idx = post_data.find('Content-Disposition', idx+1)
@@ -244,12 +246,12 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 data['code'] = post_data[code_start:code_end]
         logging.info(data)
 
-        # Debugging
-        #try:
-        request = 'self.'+data['type']+'(data)'
-        eval(request)
-        #except:
-        #    self.send_code(500)
+        # Remove the try block for debugging
+        try:
+            request = 'self.'+data['type']+'(data)'
+            eval(request)
+        except:
+            self.send_code(500)
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
