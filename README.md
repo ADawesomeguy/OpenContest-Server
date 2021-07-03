@@ -1,13 +1,15 @@
-# grader
+# Grader
 
-Reference backend implementation for the [LGP protocol](https://github.com/LadueCS/LGP) written using Python's HTTPServer.
+Reference backend implementation for the [LGP protocol](https://github.com/LadueCS/LGP) written using Python's HTTPServer and SQLite. No external dependencies other than the Python standard library and optionally Firejail for sandboxing.
 
 
 ## Usage
 
 It is highly recommended to put this server behind a reverse proxy like nginx because HTTPServer does not implement any security features.
 
-Also, you must run this server with a sandboxing program. Currently, only Firejail is supported. Although it is possible to run this program without any sandboxing at all, it is extremely dangerous.
+Also, you should run this server with a sandboxing program. Currently, only Firejail is supported. You can also run this server without a sandbox, but make sure you have some other way of isolating it, such as running it inside a Docker container or virtual machine.
+
+For debugging, you can adjust the logging configuration on the first few lines.
 
 ```
 usage: grader.py [-h] [-p PORT] [-s SANDBOX]

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="lgp-grader",
-    version="0.1.0",
+    version="0.4.0",
     author="Anthony Wang",
     author_email="ta180m@gmail.com",
     description="Reference backend implementation for the LGP protocol",
