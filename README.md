@@ -1,6 +1,6 @@
-# Grader
+# LGP-Server
 
-Reference backend implementation for the [LGP protocol](https://github.com/LadueCS/LGP) written using Python's HTTPServer and SQLite. No external dependencies other than the Python standard library and optionally Firejail for sandboxing.
+Reference backend server implementation for the [LGP protocol](https://github.com/LadueCS/LGP) written using Python's HTTPServer and SQLite. No external dependencies other than the Python standard library and optionally Firejail for sandboxing.
 
 
 ## Usage
