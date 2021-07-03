@@ -22,7 +22,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'lgp-client = grader:__main__',
+            'lgp-client = main:__main__',
         ],
     }
 )
