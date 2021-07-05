@@ -77,6 +77,7 @@ def hash_password(password):
 
 
 def process_registration(self, data):  # Process user/team registrations
+    token = False
     try:
         username, password = itemgetter('username', 'password')(data)
         if db.users.find_one({'username': username}):  # ensure unique username
@@ -85,11 +86,15 @@ def process_registration(self, data):  # Process user/team registrations
             user = {'username': username, 'password': hash_password(password), 'name': [
             ], 'emails': [], 'status': {}}
             db.users.insert_one(user)
+            token = generate_token(username)
             self.send_response(201)
+            self.send_header('Content-type', 'text/html')
     except Exception:
         self.send_error(400)
     self.send_header('Access-Control-Allow-Origin', '*')
     self.end_headers()
+    if token:
+        self.wfile.write(dumps(token).encode('utf-8'))
 
 
 def process_status(self, data):  # Process status queries
@@ -120,6 +125,7 @@ def verify_password(password, stored_password):
 
 def authenticate_user(username, password):  # Verify username and password
     user = db.users.find_one({'username': username})
+    print(user, username, password)
     return user and verify_password(password, user['password'])
 
 
@@ -255,7 +261,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if path == '/user/register':
             process_registration(self, data)
         elif path == '/submit':
-            self.process_submission(data)
+            process_submission(self, data)
         else:  # invalid POST
             self.send_response(400)
             self.send_header('Access-Control-Allow-Origin', '*')
