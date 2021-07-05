@@ -4,6 +4,7 @@ import os
 import logging
 import argparse
 import sqlite3
+import hashlib
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 
@@ -61,6 +62,10 @@ for contest in os.listdir('contests'):
 con.commit()
 
 
+def hash(password, salt):
+    return salt+hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+
+
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
     # Send back a status code with no body
     def send_code(self, code):
@@ -95,7 +100,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if cur.execute('SELECT Count(*) FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchone()[0] == 0:
             command = 'INSERT INTO '+data['contest']+'_status VALUES ("'+data['username']+'", '
             for problem in os.listdir('contests/'+data['contest']):
-                if os.path.isfile('contests/'+contest+'/'+problem): continue
+                if os.path.isfile('contests/'+contest+'/'+problem) or problem.startswith('.'): continue
                 command += '0, '
             command = command[:-2]+')'
             cur.execute(command)
@@ -108,7 +113,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     # Authenticate user
     def authenticate(self, data):
         users = cur.execute('SELECT * FROM users WHERE username = ?', (data['username'],)).fetchall()
-        return len(users) == 1 and users[0][3] == data['password']
+        return len(users) == 1 and users[0][3] == hash(data['password'], users[0][3][:32])
 
 
     # Return info about server
@@ -127,10 +132,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
     # Register a new user
     def register(self, data):
-        if cur.execute('SELECT Count(*) FROM users WHERE username="'+data['username']+'"').fetchone() == 0:
+        if cur.execute('SELECT Count(*) FROM users WHERE username=?', (data['username'],)).fetchone()[0] != 0:
             self.send_code(409)
             return
-        cur.execute('INSERT INTO users VALUES ("'+data['names']+'","'+data['emails']+'","'+data['username']+'","'+data['password']+'")')
+        cur.execute('INSERT INTO users VALUES (?, ?, ?, ?)', (data['names'],data['emails'],data['username'],hash(data['password'], os.urandom(32))))
         con.commit()
         self.send_code(201)
     
@@ -224,7 +229,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     # Handle LGP POST requests
     def do_POST(self):
         content_length = int(self.headers['Content-Length']) # Get the size of data
-        post_data = self.rfile.read(content_length).decode('ascii') # Get the data itself
+        post_data = self.rfile.read(content_length).decode('utf-8') # Get the data itself
         logging.info(post_data)
 
         idx,data = -1,{}
@@ -246,10 +251,11 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 data['code'] = post_data[code_start:code_end]
         logging.info(data)
 
-        # Remove the try block for debugging
+        # Uncomment for debugging
+        # eval('self.'+data['type']+'(data)') # Dangerous hack
+        # return
         try:
-            request = 'self.'+data['type']+'(data)'
-            eval(request)
+            eval('self.'+data['type']+'(data)') # Dangerous hack
         except:
             self.send_code(500)
 
