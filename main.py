@@ -126,6 +126,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
     def contests(self, data):
         contests = ''
         for contest in os.listdir('contests'):
+            if contest.startswith('.'): continue # skip "hidden" contests
             contests += contest+'\n'
         self.send_body(contests)
     
