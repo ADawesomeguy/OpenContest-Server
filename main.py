@@ -251,9 +251,12 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                 code_end = post_data.find('\r\n--', code_start)
                 data['code'] = post_data[code_start:code_end]
         logging.info(data)
+        
+        if any(not c.islower() for c in data['type']): # Hopefully protect against arbitrary code execution in the eval below
+            self.send_code(501)
 
         # Uncomment for debugging
-        # eval('self.'+data['type']+'(data)') # Dangerous hack
+        # eval('self.'+data['type']+'(data)')
         # return
         try:
             eval('self.'+data['type']+'(data)') # Dangerous hack
