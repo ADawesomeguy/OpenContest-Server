@@ -40,6 +40,10 @@ languages = {
     'text/x-kotlin': language('kt', 'kotlin main', 'kotlinc main.kt'),
     'text/x-lua': language('lua', 'lua main.lua'),
     'text/x-common-lisp': language('lisp', 'ecl --load main.lisp'),
+    'text/tcl': language('tcl', 'tclsh main.tcl'),
+    'text/x-julia': language('jl', 'julia main.jl'),
+    'text/x-ocaml': language('ml', 'ocaml main.ml'),
+    'text/x-haskell': language('hs', './main', 'ghc -dynamic main.hs'),
     'text/x-shellscript': language('sh', './main.sh', 'chmod +x main.sh')
 }
 
@@ -165,9 +169,9 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_code(404)
 
         # Save the program
-        with open('./main.'+languages[data['lang']].extension, 'w') as f:
+        os.system('mkdir ~/tmp')
+        with open('~/tmp/main.'+languages[data['lang']].extension, 'w') as f:
             f.write(data['code'])
-        os.system('mkdir ~/tmp; mv main* ~/tmp')
         # Sandboxing program
         if args.sandbox == 'firejail': sandbox = 'firejail --profile=firejail.profile bash -c '
         else: sandbox = 'bash -c ' # Dummy sandbox
