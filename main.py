@@ -2,13 +2,14 @@
 
 import os
 import logging
-import argparse
 import sqlite3
 import hashlib
+import json
+from argparse import ArgumentParser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 
-parser = argparse.ArgumentParser(description='Reference backend implementation for the LGP protocol')
+parser = ArgumentParser(description='Reference backend implementation for the LGP protocol')
 parser.add_argument('-p', '--port', default=6001, help='which port to run the server on', type=int)
 parser.add_argument('-s', '--sandbox', default='firejail', help='which sandboxing program to use', type=str)
 args = parser.parse_args()
@@ -161,6 +162,18 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             return
         info = open('contests/'+data['contest']+'/problems.pdf', 'rb').read()
         self.send_body(info)
+
+
+    # Return number of solves for each problem
+    def solves(self, data):
+        if not os.path.isdir('contests/'+data['contest']):
+            self.send_code(404)
+            return
+        solves = {}
+        for problem in os.listdir('contests/'+data['contest']):
+            if os.path.isfile('contests/'+contest+'/'+problem) or problem.startswith('.'): continue
+            solves[problem] = cur.execute('SELECT COUNT(*) FROM '+data['contest']+'_status WHERE P'+problem+' = 202').fetchone()[0]
+        self.send_body(json.dumps(solves))
 
 
     # Process a submission
