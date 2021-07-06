@@ -16,7 +16,7 @@ args = parser.parse_args()
 
 
 #logging.basicConfig(filename='log', level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class language:
@@ -27,25 +27,25 @@ class language:
 
 
 languages = {
-    'text/x-c++src': language('cpp', './main', 'g++ main.cpp -o main -O2'),
-    'text/x-python': language('py', 'python main.py'),
-    'text/x-java': language('java', 'java main', 'javac main.java'),
-    'text/x-csrc': language('c', './main', 'gcc main.c -o main -O2'),
-    'text/x-csharp': language('cs', 'csc main.cs -out:main.exe', 'mono main.exe'),
-    'application/javascript': language('js', 'nodejs main.js'),
-    'application/x-ruby': language('rb', 'ruby main.ruby'),
-    'application/x-perl': language('pl', 'perl main.pl'),
-    'application/x-php': language('php', 'php main.php'),
-    'text/x-go': language('go', './main', 'go build main.go'),
-    'text/x-rust': language('rs', './main', 'rustc main.rs'),
-    'text/x-kotlin': language('kt', 'kotlin main', 'kotlinc main.kt'),
-    'text/x-lua': language('lua', 'lua main.lua'),
-    'text/x-common-lisp': language('lisp', 'ecl --load main.lisp'),
-    'text/tcl': language('tcl', 'tclsh main.tcl'),
-    'text/x-julia': language('jl', 'julia main.jl'),
-    'text/x-ocaml': language('ml', 'ocaml main.ml'),
-    'text/x-haskell': language('hs', './main', 'ghc -dynamic main.hs'),
-    'text/x-shellscript': language('sh', './main.sh', 'chmod +x main.sh')
+    'cpp': language('cpp', './main', 'g++ main.cpp -o main -O2'),
+    'py': language('py', 'python main.py'),
+    'java': language('java', 'java main', 'javac main.java'),
+    'c': language('c', './main', 'gcc main.c -o main -O2'),
+    'cs': language('cs', 'csc main.cs -out:main.exe', 'mono main.exe'),
+    'js': language('js', 'nodejs main.js'),
+    'rb': language('rb', 'ruby main.ruby'),
+    'pl': language('pl', 'perl main.pl'),
+    'php': language('php', 'php main.php'),
+    'go': language('go', './main', 'go build main.go'),
+    'rs': language('rs', './main', 'rustc main.rs'),
+    'kt': language('kt', 'kotlin main', 'kotlinc main.kt'),
+    'lua': language('lua', 'lua main.lua'),
+    'lisp': language('lisp', 'ecl --load main.lisp'),
+    'tcl': language('tcl', 'tclsh main.tcl'),
+    'jl': language('jl', 'julia main.jl'),
+    'ml': language('ml', 'ocaml main.ml'),
+    'hs': language('hs', './main', 'ghc -dynamic main.hs'),
+    'sh': language('sh', 'bash main.sh', 'chmod +x main.sh')
 }
 
 
@@ -151,7 +151,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if not os.path.isdir('contests/'+data['contest']):
             self.send_code(404)
             return
-        info = open('contests/'+data['contest']+'/README.md', 'r').read()
+        info = open('contests/'+data['contest']+'/info', 'r').read()
         self.send_body(info)
     
 
@@ -182,7 +182,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_code(404)
 
         # Save the program
-        os.system('mkdir ~/tmp')
+        os.system('mkdir ~/tmp -p')
         with open('~/tmp/main.'+languages[data['lang']].extension, 'w') as f:
             f.write(data['code'])
         # Sandboxing program
@@ -223,7 +223,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_code(404)
             return
         status = cur.execute('SELECT * FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchall()
-        self.send_body(str(status))
+        self.send_body(str(status)) # Return this as JSON?
     
 
     # Return user submission history
@@ -232,7 +232,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_code(404)
             return
         history = cur.execute('SELECT "number","problem","verdict" FROM '+data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
-        self.send_body(str(history))
+        self.send_body(str(history)) # Return this as JSON?
 
     
     # Return the code for a particular submission
@@ -251,22 +251,16 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         logging.info(post_data)
 
         idx,data = -1,{}
-        # Debug this! Not very robust!
         while post_data.find('Content-Disposition', idx+1) != -1:
             idx = post_data.find('Content-Disposition', idx+1)
             key_start = post_data.find('"', idx)+1
             key_end = post_data.find('"', key_start)
+            value_start = post_data.find('\r\n\r\n', key_end)+4
+            value_end = post_data.find('\r\n--', value_start)
             if not post_data[key_start:key_end] == 'file':
-                value_start = post_data.find('\r\n', key_end)+4
-                value_end = post_data.find('\r\n--', value_start)
                 data[post_data[key_start:key_end]] = post_data[value_start:value_end]
             else:
-                lang_start = post_data.find(': ', key_end)+2
-                lang_end = post_data.find('\r\n', lang_start)
-                data['lang'] = post_data[lang_start:lang_end]
-                code_start = lang_end+4
-                code_end = post_data.find('\r\n--', code_start)
-                data['code'] = post_data[code_start:code_end]
+                data['code'] = post_data[value_start:value_end]
         logging.info(data)
         
         if any(not c.islower() for c in data['type']): # Hopefully protect against arbitrary code execution in the eval below
