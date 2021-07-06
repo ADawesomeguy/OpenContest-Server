@@ -12,11 +12,13 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 parser = ArgumentParser(description='Reference backend implementation for the LGP protocol')
 parser.add_argument('-p', '--port', default=6001, help='which port to run the server on', type=int)
 parser.add_argument('-s', '--sandbox', default='firejail', help='which sandboxing program to use', type=str)
+parser.add_argument('-d', '--debug', action='store_true', help='run server in debug mode')
 args = parser.parse_args()
 
 
 #logging.basicConfig(filename='log', level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG)
+if args.debug:
+    logging.basicConfig(level=logging.DEBUG)
 
 
 class language:
@@ -123,7 +125,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
     # Return info about server
     def about(self, data):
-        about = open('about', 'r').read()
+        about = open('about.json', 'r').read()
         self.send_body(about)
 
 
@@ -151,7 +153,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         if not os.path.isdir('contests/'+data['contest']):
             self.send_code(404)
             return
-        info = open('contests/'+data['contest']+'/info', 'r').read()
+        info = open('contests/'+data['contest']+'/info.json', 'r').read()
         self.send_body(info)
     
 
@@ -183,15 +185,15 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
         # Save the program
         os.system('mkdir ~/tmp -p')
-        with open('~/tmp/main.'+languages[data['lang']].extension, 'w') as f:
+        with open(os.path.expanduser('~/tmp/main.'+languages[data['language']].extension), 'w') as f:
             f.write(data['code'])
         # Sandboxing program
         if args.sandbox == 'firejail': sandbox = 'firejail --profile=firejail.profile bash -c '
         else: sandbox = 'bash -c ' # Dummy sandbox
 
         # Compile the code if needed
-        if languages[data['lang']].compile_cmd != '':
-            ret = os.system('cd ~/tmp && '+languages[data['lang']].compile_cmd)
+        if languages[data['language']].compile_cmd != '':
+            ret = os.system('cd ~/tmp && '+languages[data['language']].compile_cmd)
             if ret:
                 self.verdict(data, 500)
                 return
@@ -200,7 +202,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
             os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
-            ret = os.system(sandbox+'"cd ~/tmp; timeout 1 '+languages[data['lang']].cmd+' < in > out"')
+            ret = os.system(sandbox+'"cd ~/tmp; timeout 1 '+languages[data['language']].cmd+' < in > out"')
             os.system('rm ~/tmp/in')
             if ret != 0:
                 self.verdict(data, 408) # Runtime error
@@ -250,25 +252,15 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length).decode('utf-8') # Get the data itself
         logging.info(post_data)
 
-        idx,data = -1,{}
-        while post_data.find('Content-Disposition', idx+1) != -1:
-            idx = post_data.find('Content-Disposition', idx+1)
-            key_start = post_data.find('"', idx)+1
-            key_end = post_data.find('"', key_start)
-            value_start = post_data.find('\r\n\r\n', key_end)+4
-            value_end = post_data.find('\r\n--', value_start)
-            if not post_data[key_start:key_end] == 'file':
-                data[post_data[key_start:key_end]] = post_data[value_start:value_end]
-            else:
-                data['code'] = post_data[value_start:value_end]
+        data = json.loads(post_data) # Parse JSON
         logging.info(data)
         
         if any(not c.islower() for c in data['type']): # Hopefully protect against arbitrary code execution in the eval below
             self.send_code(501)
 
-        # Uncomment for debugging
-        # eval('self.'+data['type']+'(data)')
-        # return
+        if args.debug:
+            eval('self.'+data['type']+'(data)')
+            return
         try:
             eval('self.'+data['type']+'(data)') # Dangerous hack
         except:
