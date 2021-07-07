@@ -5,6 +5,7 @@ import logging
 import sqlite3
 import hashlib
 import json
+import datetime
 from argparse import ArgumentParser
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
@@ -180,7 +181,9 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
     # Process a submission
     def submit(self, data):
-        if not self.authenticate(data) or data['contest'] not in os.listdir('contests') or data['problem'] not in os.listdir('contests/'+data['contest']):
+        if not self.authenticate(data) \
+            or data['contest'] not in os.listdir('contests') or not os.path.exists('contests/'+data['contest']+'/'+data['problem']) \
+            or datetime.datetime.now() < datetime.datetime.fromisoformat(json.loads(open('contests/'+data['contest']+'/info.json', 'r').read())['start-time']):
             self.send_code(404)
 
         # Save the program
@@ -193,16 +196,22 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
         # Compile the code if needed
         if languages[data['language']].compile_cmd != '':
-            ret = os.system('cd ~/tmp && '+languages[data['language']].compile_cmd)
+            ret = os.system('cd ~/tmp && timeout 10 '+languages[data['language']].compile_cmd)
             if ret:
                 self.verdict(data, 500)
                 return
 
-        tc,tcdir = 1,'contests/'+contest+'/'+problem+'/'
+        tcdir = 'contests/'+data['contest']+'/'+problem+'/'
+        with open(tcdir+'config.json') as f:
+            config = json.loads(f.read())
+            time_limit = config['time-limit']
+            memory_limit = config['memory-limit']
+        
+        tc = 1
         while os.path.isfile(tcdir+str(tc)+'.in'):
             # Run test case
             os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
-            ret = os.system(sandbox+'"cd ~/tmp; timeout 1 '+languages[data['language']].cmd+' < in > out"')
+            ret = os.system('ulimit -v '+memory_limit+';'+sandbox+'"cd ~/tmp; timeout '+str(time_limit/1000)+languages[data['language']].cmd+' < in > out";ulimit -v unlimited')
             os.system('rm ~/tmp/in')
             if ret != 0:
                 self.verdict(data, 408) # Runtime error
