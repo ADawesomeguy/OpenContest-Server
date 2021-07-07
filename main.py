@@ -9,6 +9,7 @@ from hashlib import sha256, pbkdf2_hmac
 from binascii import hexlify
 from json import loads, dumps
 from jwt import encode, decode
+from base64 import b64decode
 
 tokenKey = 'tokenKey123'  # TODO: hide token key
 db = MongoClient(port=27017).laduecs
@@ -239,14 +240,28 @@ def process_submission(self, data):
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
+    def parse_headers(self):
+        try:
+            auth, auth_content = self.headers['Authorization'].split(' ', 1)
+            if auth == 'Basic':
+                username, password = b64decode(
+                    auth_content).decode('utf-8').split(':', 1)
+                return {'username': username, 'password': password}
+            elif auth == 'Bearer':
+                return {'token': auth_content}
+        except Exception:
+            return {}
+
     def parse_data(self):
-        # Get the size of data
-        content_length = int(self.headers['Content-Length'])
-        return loads(self.rfile.read(content_length).decode(
-            'ascii'))  # Get the data itself
+        try:
+            # Get the size of data
+            content_length = int(self.headers['Content-Length'])
+            return loads(self.rfile.read(content_length).decode(
+                'ascii'))  # Get the data itself
+        except Exception:
+            return {}
 
     def do_OPTIONS(self):
-        print(self.path)
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -256,8 +271,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
     # Handle LGP POST requests
     def do_POST(self):
-        path, data = self.path, self.parse_data()
-
+        path, data, auth = self.path, self.parse_data(), self.parse_headers()
+        data.update(auth)
         if path == '/user/register':
             process_registration(self, data)
         elif path == '/submit':
@@ -269,8 +284,8 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
     # Handle LGP GET requests
     def do_GET(self):
-        path, data = self.path, self.parse_data()
-
+        path, data, auth = self.path, self.parse_data(), self.parse_headers()
+        data.update(auth)
         if path == '/user/login':
             process_login(self, data)
         elif path == '/status':
@@ -289,7 +304,7 @@ def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler
 
 parser = ArgumentParser(
     description='Reference backend implementation for the LGP protocol')
-parser.add_argument('-p', '--port', default=7789,
+parser.add_argument('-p', '--port', default=6001,
                     help='which port to run the server on', type=int)
 parser.add_argument('-s', '--sandbox', default='firejail',
                     help='which sandboxing program to use', type=str)
