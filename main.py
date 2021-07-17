@@ -254,6 +254,13 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         code = cur.execute('SELECT "code" FROM '+data['contest']+'_submissions WHERE username = ? AND number = ?', (data['username'], data['number'])).fetchone()[0]
         self.send_body(str(code))
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers',
+                         'X-Requested-With, Content-Type')
+        self.end_headers()
 
     # Handle LGP POST requests
     def do_POST(self):
@@ -263,7 +270,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
 
         data = json.loads(post_data) # Parse JSON
         logging.info(data)
-        
+        print(data)
         if any(not c.islower() for c in data['type']): # Hopefully protect against arbitrary code execution in the eval below
             self.send_code(501)
 
