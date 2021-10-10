@@ -6,13 +6,15 @@ from base64 import b64decode
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 from args import args
-import users
+import user
 import contest
 
 tokenKey = 'tokenKey123'  # TODO: hide token key
 
-def about():  # Return info about server
+
+def about(_=None):  # Return info about server
     return open('about.json', 'r').read()
+
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
     def send(self, body, code=200):  # Send back a status code with no body
@@ -22,6 +24,10 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
         else:  # Send response body
+            try:
+                body = json.loads(body)
+            except (TypeError, json.decoder.JSONDecodeError):
+                pass
             body = json.dumps(body).encode('utf-8')
             self.send_response(code)
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -59,35 +65,29 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                          'Authorization, Content-Type')
         self.end_headers()
 
-    def do_POST(self):  # Handle POST requests
+    def do_POST(self):  # Handle requests
         path, data, auth = self.path, self.parse_data(), self.parse_headers()
         logging.info(data)
         data.update(auth)
-        print(data)
+        print(data, path)
 
-        response = 400
-        if path == '/user/register':
-            response = users.register(data)
-        elif path == '/submit':
-            response = contest.submit(data)
+        routes = {
+            # POST Requests
+            '/user/register': user.register,
+            '/submit/': contest.submit,
+            # GET Requests
+            '/about': about,
+            '/contests': contest.contests,
+            '/contests/info': contest.info,
+            '/contests/problems': contest.problems,
+            '/user/login': user.login,
+            '/status': contest.status
+        }
 
-        self.send(response)
+        self.send(routes.get(path, lambda _: 400)(data))
 
-    def do_GET(self):  # Handle GET requests
-        path, data, auth = self.path, self.parse_data(), self.parse_headers()
-        logging.info(data)
-        data.update(auth)
-        print(data)
-
-        response = 400
-        if path == '/about':
-            response = about()
-        elif path == '/user/login':
-            response = users.login(data)
-        elif path == '/status':
-            response = contest.status(data)
-
-        self.send(response)
+    def do_GET(self):
+        self.do_POST()
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
@@ -97,4 +97,3 @@ def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler
 
 
 run()
- 

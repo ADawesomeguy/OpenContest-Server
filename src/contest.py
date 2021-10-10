@@ -3,16 +3,20 @@
 import os
 import logging
 import datetime
-
 from args import args
-import users
+
+import user
 import db
+
+cwd = 'contests/'
+
 
 class language:
     def __init__(self, extension, cmd, compile_cmd=''):
         self.extension = extension
         self.cmd = cmd
         self.compile_cmd = compile_cmd
+
 
 languages = {
     'cpp': language('cpp', './main', 'g++ main.cpp -o main -O2'),
@@ -36,37 +40,41 @@ languages = {
     'sh': language('sh', 'bash main.sh', 'chmod +x main.sh')
 }
 
-def contests():  # Return contests on this server
-    contests = ''
-    for contest in os.listdir('contests'):
-        if contest.startswith('.'):
-            continue  # skip "hidden" contests
-        contests += contest+'\n'
-    return contests
 
-def info(self, data): # Return information about a contest
-    if not os.path.isdir('contests/'+data['contest']):
-        self.send_code(404)
-        return
-    info = open('contests/'+data['contest']+'/info.json', 'r').read()
-    self.send_body(info)
+def contests(_=None):  # Return contests on this server
+    # skip hidden contests
+    return [dir for dir in next(os.walk('contests'))[1] if not dir.startswith('.')]
 
-def problems(data): # Return the problems statements for a contest
-    if not os.path.isdir('contests/'+data['contest']):
+
+def info(data):  # Return information about a contest
+    try:
+        return open(cwd+data['contest']+'/info.json', 'r').read()
+    except KeyError:
+        return 400
+    except FileNotFoundError:
         return 404
-    info = open('contests/'+data['contest']+'/problems.pdf', 'rb').read()
-    return info
 
-def solves(data): # Return number of solves for each problem
-    if not os.path.isdir('contests/'+data['contest']):
+
+def problems(data):  # Return the problems statements for a contest
+    try:
+        return str(open(cwd+data['contest']+'/problems.pdf', 'rb').read())
+    except KeyError:
+        return 400
+    except FileNotFoundError:
+        return 404
+
+
+def solves(data):  # Return number of solves for each problem
+    if not os.path.isdir(cwd+data['contest']):
         return 404
     solves = {}
-    for problem in os.listdir('contests/'+data['contest']):
-        if os.path.isfile('contests/'+contest+'/'+problem) or problem.startswith('.'):
+    for problem in os.listdir(cwd+data['contest']):
+        if os.path.isfile(cwd+contest+'/'+problem) or problem.startswith('.'):
             continue
         solves[problem] = db.cur.execute(
             'SELECT COUNT(*) FROM '+data['contest']+'_status WHERE P'+problem+' = 202').fetchone()[0]
     return solves
+
 
 def verdict(data, ver):  # Save verdict and send back result to the client
     os.system('rm -rf ~/tmp')  # Clean up ~/tmp
@@ -74,28 +82,29 @@ def verdict(data, ver):  # Save verdict and send back result to the client
     logging.info(ver)
 
     num = int(db.cur.execute('SELECT Count(*) FROM ' +
-                          data['contest']+'_submissions').fetchone()[0])
+                             data['contest']+'_submissions').fetchone()[0])
     db.cur.execute('INSERT INTO '+data['contest']+'_submissions VALUES (?, ?, ?, ?, ?)',
-                (num, data['username'], data['problem'], data['code'], ver))
+                   (num, data['username'], data['problem'], data['code'], ver))
 
     if db.cur.execute('SELECT Count(*) FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchone()[0] == 0:
         command = 'INSERT INTO '+data['contest'] + \
             '_status VALUES ("'+data['username']+'", '
-        for problem in os.listdir('contests/'+data['contest']):
-            if os.path.isfile('contests/'+contest+'/'+problem) or problem.startswith('.'):
+        for problem in os.listdir(cwd+data['contest']):
+            if os.path.isfile(cwd+contest+'/'+problem) or problem.startswith('.'):
                 continue
             command += '0, '
         command = command[:-2]+')'
         db.cur.execute(command)
     db.cur.execute('UPDATE '+data['contest']+'_status SET P'+data['problem'] +
-                ' = ? WHERE username = ?', (str(ver), data['username'],))
+                   ' = ? WHERE username = ?', (str(ver), data['username'],))
     db.cur.commit()
     return ver
 
-def submit(data): # Process a submission
-    if not users.authenticate(data) \
-            or data['contest'] not in os.listdir('contests') or not os.path.exists('contests/'+data['contest']+'/'+data['problem']) \
-            or datetime.datetime.now() < datetime.datetime.fromisoformat(json.loads(open('contests/'+data['contest']+'/info.json', 'r').read())['start-time']):
+
+def submit(data):  # Process a submission
+    if not user.authenticate(data) \
+            or data['contest'] not in os.listdir('contests') or not os.path.exists(cwd+data['contest']+'/'+data['problem']) \
+            or datetime.datetime.now() < datetime.datetime.fromisoformat(json.loads(open(cwd+data['contest']+'/info.json', 'r').read())['start-time']):
         return 404
 
     # Save the program
@@ -116,7 +125,7 @@ def submit(data): # Process a submission
             verdict(data, 500)
             return
 
-    tcdir = 'contests/'+data['contest']+'/'+problem+'/'
+    tcdir = cwd+data['contest']+'/'+problem+'/'
     with open(tcdir+'config.json') as f:
         config = json.loads(f.read())
         time_limit = config['time-limit']
@@ -145,7 +154,7 @@ def submit(data): # Process a submission
 
 
 def status(data):  # Return user status
-    if not users.authenticate(data) or data['contest'] not in os.listdir('contests'):
+    if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
     status = db.cur.execute(
         'SELECT * FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchall()
@@ -153,19 +162,18 @@ def status(data):  # Return user status
 
 
 def history(self, data):  # Return user submission history
-    if not users.authenticate(data) or data['contest'] not in os.listdir('contests'):
+    if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
     history = db.cur.execute('SELECT "number","problem","verdict" FROM ' +
-                          data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
+                             data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
     return history  # Return this as JSON?
 
 # Return the code for a particular submission
 
 
 def code(data):
-    if not users.authenticate(data) or data['contest'] not in os.listdir('contests'):
+    if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
     code = db.cur.execute(
         'SELECT "code" FROM '+data['contest']+'_submissions WHERE username = ? AND number = ?', (data['username'], data['number'])).fetchone()[0]
     return(code)
-
