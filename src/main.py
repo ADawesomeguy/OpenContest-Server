@@ -17,9 +17,11 @@ def about(_=None):  # Return info about server
 
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
-    def send(self, body, code=200):  # Send back a status code with no body
+    def send(self, body, code=200):
         logging.info(body)
-        if type(body) == int:
+        if type(body) == tuple:  # Send status code with response body
+            self.send(*body)
+        elif type(body) == int:  # Send status code without response body
             self.send_response(body)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
@@ -65,29 +67,35 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
                          'Authorization, Content-Type')
         self.end_headers()
 
-    def do_POST(self):  # Handle requests
-        path, data, auth = self.path, self.parse_data(), self.parse_headers()
-        logging.info(data)
-        data.update(auth)
-        print(data, path)
-
-        routes = {
-            # POST Requests
-            '/user/register': user.register,
-            '/submit/': contest.submit,
-            # GET Requests
-            '/about': about,
-            '/contests': contest.contests,
-            '/contests/info': contest.info,
-            '/contests/problems': contest.problems,
-            '/user/login': user.login,
-            '/status': contest.status
-        }
-
-        self.send(routes.get(path, lambda _: 400)(data))
+    def do_POST(self):
+        self.handle_request()
 
     def do_GET(self):
-        self.do_POST()
+        self.handle_request()
+
+    def handle_request(self):  # Handle requests
+        command, path, data, auth = self.command, self.path, self.parse_data(), self.parse_headers()
+        logging.info(data)
+        data.update(auth)
+        print(command, path, data)
+
+        routes = {
+            'POST': {  # POST Requests
+                '/user/register': user.register,
+                '/contest/submit': contest.submit,
+            },
+            'GET': {  # GET Requests
+                '/about': about,
+                '/user/login': user.login,
+                '/contest': contest.contests,
+                '/contest/info': contest.info,
+                '/contest/problems': contest.problems,
+                '/contest/solves': contest.solves,
+                '/contets/status': contest.status
+            }
+        }
+        self.send(routes.get(command, {}).get(
+            path.rstrip('/'), lambda _: 400)(data))
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):

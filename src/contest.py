@@ -43,7 +43,7 @@ languages = {
 
 def contests(_=None):  # Return contests on this server
     # skip hidden contests
-    return [dir for dir in next(os.walk('contests'))[1] if not dir.startswith('.')]
+    return [dir for dir in next(os.walk(cwd))[1] if not dir.startswith('.')]
 
 
 def info(data):  # Return information about a contest
@@ -51,7 +51,7 @@ def info(data):  # Return information about a contest
         return open(cwd+data['contest']+'/info.json', 'r').read()
     except KeyError:
         return 400
-    except FileNotFoundError:
+    except (NotADirectoryError, FileNotFoundError):
         return 404
 
 
@@ -60,20 +60,27 @@ def problems(data):  # Return the problems statements for a contest
         return str(open(cwd+data['contest']+'/problems.pdf', 'rb').read())
     except KeyError:
         return 400
-    except FileNotFoundError:
+    except (NotADirectoryError, FileNotFoundError):
         return 404
 
 
 def solves(data):  # Return number of solves for each problem
-    if not os.path.isdir(cwd+data['contest']):
+    try:
+        contest = data['contest']
+        if not os.path.isdir(cwd+contest):
+            return 404
+        solves = {}
+        for problem in next(os.walk(cwd+contest))[1]:
+            print(problem)
+            if problem.startswith('.'):
+                continue
+            solves[problem] = db.cur.execute(
+                'SELECT COUNT(*) FROM '+contest+'_status WHERE P'+problem+' = 202').fetchone()[0]
+        return solves
+    except KeyError:
+        return 400
+    except FileNotFoundError:
         return 404
-    solves = {}
-    for problem in os.listdir(cwd+data['contest']):
-        if os.path.isfile(cwd+contest+'/'+problem) or problem.startswith('.'):
-            continue
-        solves[problem] = db.cur.execute(
-            'SELECT COUNT(*) FROM '+data['contest']+'_status WHERE P'+problem+' = 202').fetchone()[0]
-    return solves
 
 
 def verdict(data, ver):  # Save verdict and send back result to the client

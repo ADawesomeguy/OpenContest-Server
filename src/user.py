@@ -2,24 +2,34 @@
 
 import os
 import hashlib
-#import jwt
+from operator import itemgetter
+# import jwt
 
 import db
+
 
 def hash(password, salt):
     return salt+hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
 
+
 def generate_token(username):
     return username
-    #return jwt.encode({'username': username}, tokenKey)
+    # return jwt.encode({'sub': username}, tokenKey)
+
 
 def register(data):  # Register a new user
-    if db.cur.execute('SELECT Count(*) FROM users WHERE username=?', (data['username'],)).fetchone()[0] != 0:
+    try:
+        username, password, name, email = itemgetter(
+            'username', 'password', 'name', 'email')(data)
+    except KeyError:
+        return 400
+    if db.cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] != 0:
         return 409
     db.cur.execute('INSERT INTO users VALUES (?, ?, ?, ?)',
-                (data['names'], data['emails'], data['username'], hash(data['password'], os.urandom(32))))
+                   (name, email, username, hash(password, os.urandom(32))))
     db.con.commit()
-    return 201
+    return generate_token(username), 201
+
 
 def login(data):  # TODO: Login and return token
     token = False
@@ -31,6 +41,7 @@ def login(data):  # TODO: Login and return token
             return 401
     except Exception:
         return 400
+
 
 def authenticate(data):  # Authenticate user: verify password
     users = db.cur.execute(

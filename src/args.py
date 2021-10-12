@@ -2,6 +2,7 @@
 
 import logging
 from argparse import ArgumentParser
+# from dotenv import load_env
 
 parser = ArgumentParser(
     description='Reference backend implementation for the LGP protocol')
@@ -12,8 +13,12 @@ parser.add_argument('-s', '--sandbox', default='firejail',
 parser.add_argument('-d', '--debug', action='store_true',
                     help='run server in debug mode')
 args = parser.parse_args()
-
-
 #logging.basicConfig(filename='log', level=logging.INFO)
+
 if args.debug:
     logging.basicConfig(level=logging.DEBUG)
+
+# load_dotenv()
+
+import sys
+print(sys.version)

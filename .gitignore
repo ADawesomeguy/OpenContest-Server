@@ -1,9 +1,10 @@
 # Custom
 contests
 log
-db*
+db
 .vscode
 .DS_Store
+.env
 
 
 # Byte-compiled / optimized / DLL files
