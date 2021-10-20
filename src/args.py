@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import logging
 from argparse import ArgumentParser
@@ -19,6 +19,3 @@ if args.debug:
     logging.basicConfig(level=logging.DEBUG)
 
 # load_dotenv()
-
-import sys
-print(sys.version)

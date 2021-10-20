@@ -1,11 +1,12 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import hashlib
+import sqlite3
 from operator import itemgetter
 # import jwt
 
-import db
+from db import con, cur
 
 
 def hash(password, salt):
@@ -23,11 +24,12 @@ def register(data):  # Register a new user
             'username', 'password', 'name', 'email')(data)
     except KeyError:
         return 400
-    if db.cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] != 0:
+    try:
+        cur.execute('INSERT INTO users VALUES (?, ?, ?, ?)',
+                (name, email, username, hash(password, os.urandom(32))))
+        con.commit()
+    except sqlite3.IntegrityError:
         return 409
-    db.cur.execute('INSERT INTO users VALUES (?, ?, ?, ?)',
-                   (name, email, username, hash(password, os.urandom(32))))
-    db.con.commit()
     return generate_token(username), 201
 
 
@@ -44,6 +46,11 @@ def login(data):  # TODO: Login and return token
 
 
 def authenticate(data):  # Authenticate user: verify password
-    users = db.cur.execute(
+    users = cur.execute(
         'SELECT * FROM users WHERE username = ?', (data['username'],)).fetchall()
     return len(users) == 1 and users[0][3] == hash(data['password'], users[0][3][:32])
+
+
+# Create user table
+cur.execute(
+    'CREATE TABLE IF NOT EXISTS users (username text unique, name text, email text unique, password text)')

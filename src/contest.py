@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import logging
@@ -6,9 +6,8 @@ import datetime
 from args import args
 
 import user
-import db
-
-cwd = 'contests/'
+from db import con, cur
+from var import contests as cwd
 
 
 class language:
@@ -67,14 +66,13 @@ def problems(data):  # Return the problems statements for a contest
 def solves(data):  # Return number of solves for each problem
     try:
         contest = data['contest']
-        if not os.path.isdir(cwd+contest):
+        if not os.path.isdir(cwd+'contests/'+contest):
             return 404
         solves = {}
         for problem in next(os.walk(cwd+contest))[1]:
-            print(problem)
             if problem.startswith('.'):
                 continue
-            solves[problem] = db.cur.execute(
+            solves[problem] = cur.execute(
                 'SELECT COUNT(*) FROM '+contest+'_status WHERE P'+problem+' = 202').fetchone()[0]
         return solves
     except KeyError:
@@ -88,12 +86,12 @@ def verdict(data, ver):  # Save verdict and send back result to the client
 
     logging.info(ver)
 
-    num = int(db.cur.execute('SELECT Count(*) FROM ' +
-                             data['contest']+'_submissions').fetchone()[0])
-    db.cur.execute('INSERT INTO '+data['contest']+'_submissions VALUES (?, ?, ?, ?, ?)',
-                   (num, data['username'], data['problem'], data['code'], ver))
+    num = int(cur.execute('SELECT Count(*) FROM ' +
+                          data['contest']+'_submissions').fetchone()[0])
+    cur.execute('INSERT INTO '+data['contest']+'_submissions VALUES (?, ?, ?, ?, ?)',
+                (num, data['username'], data['problem'], data['code'], ver))
 
-    if db.cur.execute('SELECT Count(*) FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchone()[0] == 0:
+    if cur.execute('SELECT Count(*) FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchone()[0] == 0:
         command = 'INSERT INTO '+data['contest'] + \
             '_status VALUES ("'+data['username']+'", '
         for problem in os.listdir(cwd+data['contest']):
@@ -101,10 +99,10 @@ def verdict(data, ver):  # Save verdict and send back result to the client
                 continue
             command += '0, '
         command = command[:-2]+')'
-        db.cur.execute(command)
-    db.cur.execute('UPDATE '+data['contest']+'_status SET P'+data['problem'] +
-                   ' = ? WHERE username = ?', (str(ver), data['username'],))
-    db.cur.commit()
+        cur.execute(command)
+    cur.execute('UPDATE '+data['contest']+'_status SET P'+data['problem'] +
+                ' = ? WHERE username = ?', (str(ver), data['username'],))
+    cur.commit()
     return ver
 
 
@@ -163,7 +161,7 @@ def submit(data):  # Process a submission
 def status(data):  # Return user status
     if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
-    status = db.cur.execute(
+    status = cur.execute(
         'SELECT * FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchall()
     return status
 
@@ -171,8 +169,8 @@ def status(data):  # Return user status
 def history(self, data):  # Return user submission history
     if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
-    history = db.cur.execute('SELECT "number","problem","verdict" FROM ' +
-                             data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
+    history = cur.execute('SELECT "number","problem","verdict" FROM ' +
+                          data['contest']+'_submissions WHERE username = ?', (data['username'],)).fetchall()
     return history  # Return this as JSON?
 
 # Return the code for a particular submission
@@ -181,6 +179,20 @@ def history(self, data):  # Return user submission history
 def code(data):
     if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
-    code = db.cur.execute(
+    code = cur.execute(
         'SELECT "code" FROM '+data['contest']+'_submissions WHERE username = ? AND number = ?', (data['username'], data['number'])).fetchone()[0]
     return(code)
+
+
+for contest in contests():
+    # Create contest status table
+    command = 'CREATE TABLE IF NOT EXISTS '+contest+'_status (username text, '
+    # skip hidden problems
+    for problem in [dir for dir in next(os.walk(cwd+contest))[1] if not dir.startswith('.')]:
+        command += 'P'+problem+' text, '
+    command = command[:-2]+')'
+    cur.execute(command)
+    # Create contest submissions table
+    cur.execute('CREATE TABLE IF NOT EXISTS '+contest +
+                '_submissions (number real, username text, problem text, code text, verdict real)')
+con.commit()

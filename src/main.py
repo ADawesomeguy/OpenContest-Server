@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import logging
 import json
@@ -8,12 +8,13 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from args import args
 import user
 import contest
+from var import cwd
 
 tokenKey = 'tokenKey123'  # TODO: hide token key
 
 
 def about(_=None):  # Return info about server
-    return open('about.json', 'r').read()
+    return open(cwd+'about.json', 'r').read()
 
 
 class FileUploadRequestHandler(BaseHTTPRequestHandler):
