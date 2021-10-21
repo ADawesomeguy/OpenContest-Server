@@ -34,8 +34,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             body = json.dumps(body).encode('utf-8')
             self.send_response(code)
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Content-Length', str(len(body)))
-            self.send_header('Contest-Type', 'text/html')
+            self.send_header('Contest-Type', 'application/json')
             self.end_headers()
             self.wfile.write(body)
 
