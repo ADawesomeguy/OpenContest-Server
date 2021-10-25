@@ -2,6 +2,7 @@
 
 import logging
 import json
+from urllib.parse import urlparse
 from base64 import b64decode
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
@@ -34,7 +35,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             body = json.dumps(body).encode('utf-8')
             self.send_response(code)
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Contest-Type', 'application/json')
+            self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(body)
 
@@ -50,7 +51,13 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
-    def parse_data(self):
+    def parse_query(self):
+        try:
+            return dict(qc.split("=") for qc in urlparse(self.path).query.split("&"))
+        except Exception:
+            return {}
+
+    def parse_body(self):
         try:
             # Get the size of data
             content_length = int(self.headers['Content-Length'])
@@ -74,10 +81,12 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
         self.handle_request()
 
     def handle_request(self):  # Handle requests
-        command, path, data, auth = self.command, self.path, self.parse_data(), self.parse_headers()
-        logging.info(data)
-        data.update(auth)
-        print(command, path, data)
+        command, path = self.command, urlparse(self.path).path
+        auth, query, body = self.parse_headers(), self.parse_query(), self.parse_body()
+        body.update(auth)
+        body.update(query)
+        logging.info(body)
+        print(command, path, body)
 
         routes = {
             'POST': {  # POST Requests
@@ -95,7 +104,7 @@ class FileUploadRequestHandler(BaseHTTPRequestHandler):
             }
         }
         self.send(routes.get(command, {}).get(
-            path.rstrip('/'), lambda _: 400)(data))
+            path.rstrip('/'), lambda _: 400)(body))
 
 
 def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):

@@ -166,7 +166,7 @@ def status(data):  # Return user status
     return status
 
 
-def history(self, data):  # Return user submission history
+def history(data):  # Return user submission history
     if not user.authenticate(data) or data['contest'] not in os.listdir('contests'):
         return 404
     history = cur.execute('SELECT "number","problem","verdict" FROM ' +
@@ -184,8 +184,8 @@ def code(data):
     return(code)
 
 
+# Create contest status table
 for contest in contests():
-    # Create contest status table
     command = 'CREATE TABLE IF NOT EXISTS '+contest+'_status (username text, '
     # skip hidden problems
     for problem in [dir for dir in next(os.walk(cwd+contest))[1] if not dir.startswith('.')]:
