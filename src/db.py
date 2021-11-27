@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
+import logging
+import os
 from sqlite3 import connect
 
-from var import cwd
+from args import args
 
-# Prepare db
-con = connect(cwd+'db', check_same_thread=False)
+
+# Prepare database
+database = os.path.join(args.data_dir, 'data.db')
+logging.debug(database)
+con = connect(database, check_same_thread=False)
 cur = con.cursor()
-print('database connected')
+logging.info('Database connected')

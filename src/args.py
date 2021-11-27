@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 from argparse import ArgumentParser
-# from dotenv import load_env
+
 
 parser = ArgumentParser(
-    description='Reference backend implementation for the LGP protocol')
-parser.add_argument('-p', '--port', default=6001,
-                    help='which port to run the server on', type=int)
+    description='Reference server implementation for the OpenContest protocol')
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help='Enable verbose logging')
+parser.add_argument('-p', '--port', default=6000,
+                    help='Port to run the server on', type=int)
 parser.add_argument('-s', '--sandbox', default='firejail',
-                    help='which sandboxing program to use', type=str)
-parser.add_argument('-d', '--debug', action='store_true',
-                    help='run server in debug mode')
+                    help='Sandboxing program', type=str)
+parser.add_argument('--data-dir', default=os.path.join(os.getcwd(), 'data'),
+                    help='Data directory', type=str)
+parser.add_argument('--contests-dir', default=os.path.join(os.getcwd(), 'contests'),
+                    help='Contests directory', type=str)
+parser.add_argument('--problems-dir', default=os.path.join(os.getcwd(), 'problems'),
+                    help='Problems directory', type=str)
 args = parser.parse_args()
-#logging.basicConfig(filename='log', level=logging.INFO)
 
-if args.debug:
+
+if args.verbose:
     logging.basicConfig(level=logging.DEBUG)
-
-# load_dotenv()

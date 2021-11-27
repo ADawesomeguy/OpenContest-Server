@@ -1,11 +1,9 @@
 # Custom
+data
 contests
-log
-db
-test.rest
+problems
 .vscode
 .DS_Store
-.env
 
 
 # Byte-compiled / optimized / DLL files

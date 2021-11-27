@@ -1,11 +1,11 @@
-# LGP-Server
+# OpenContest Server
 
-Reference backend server implementation for the [LGP protocol](https://github.com/LadueCS/LGP) written using Python's HTTPServer and SQLite. No external dependencies other than the Python standard library and optionally Firejail for sandboxing.
+Reference backend server implementation for the [OpenContest protocol](https://github.com/LadueCS/OpenContest) written using Python's HTTPServer and SQLite. No external dependencies other than the Python standard library and optionally Firejail for sandboxing.
 
 
 ## Usage
 
-Run the server with `./main.py`. You can place contests like the [sample contest](https://github.com/LadueCS/Test) in a `contests` directory.
+Run the server with `src/main.py`. You can place contests like the [sample contest](https://github.com/LadueCS/Test) in a `contests` directory.
 
 It is highly recommended to put this server behind a reverse proxy like nginx because HTTPServer does not implement any security features.
 
