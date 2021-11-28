@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
-
+# Programming language class
+# Must contain a command to get version and run code
+# Compile command is optional
 class language:
     def __init__(self, version, run, compile=None):
         self.version = version
         self.run = run
         self.compile = compile
 
-
+# TODO: Support more languages
 languages = {
     # Language       Version                                     Run             Compile
     'cpp':  language('g++ --version | head -n1 | cut -d" " -f3', './main',       'g++ main.cpp -o main -O2'),

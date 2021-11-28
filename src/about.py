@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
-import json
+import logging
 import os
 import subprocess
 
 from args import args
 from languages import languages
 
-
-about = { 'version': '2.0.0', 'languages': {} }
-
+# Construct about object
+about = { 'version': '2.1.0', 'languages': dict() }
 for name, description in languages.items():
     about['languages'][name] = subprocess.check_output(description.version, shell=True).decode('utf-8')[:-1]
+about = json.dumps(about)
+logging.debug(about)
 
-with open(os.path.join(args.data_dir, 'about.json'), 'w') as f:
-    f.write(json.dumps(about))
+# Handle about requests
+# Return information about this OpenContest server
+def about():
+    return (200, about)

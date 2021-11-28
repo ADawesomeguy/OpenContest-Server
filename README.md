@@ -11,18 +11,23 @@ It is highly recommended to put this server behind a reverse proxy like nginx be
 
 Also, you should run this server with a sandboxing program. Currently, only Firejail is supported. You can also run this server without a sandbox, but make sure you have some other way of isolating it, such as running it inside a Docker container or virtual machine.
 
-For debugging, you can run the server with the `debug` flag.
+For debugging, you can run the server with the `version` flag.
 
 ```
-usage: main.py [-h] [-p PORT] [-s SANDBOX] [-d]
+usage: main.py [-h] [-v] [-p PORT] [-s SANDBOX] [--data-dir DATA_DIR] [--contests-dir CONTESTS_DIR] [--problems-dir PROBLEMS_DIR]
 
-Reference backend implementation for the LGP protocol
+Reference server implementation for the OpenContest protocol
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p PORT, --port PORT  which port to run the server on
+  -v, --verbose         Enable verbose logging
+  -p PORT, --port PORT  Port to run the server on
   -s SANDBOX, --sandbox SANDBOX
-                        which sandboxing program to use
-  -d, --debug           run server in debug mode
+                        Sandboxing program
+  --data-dir DATA_DIR   Data directory
+  --contests-dir CONTESTS_DIR
+                        Contests directory
+  --problems-dir PROBLEMS_DIR
+                        Problems directory
 ```
 

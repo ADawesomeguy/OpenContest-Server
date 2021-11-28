@@ -6,7 +6,6 @@ from sqlite3 import connect
 
 from args import args
 
-
 # Prepare database
 database = os.path.join(args.data_dir, 'data.db')
 logging.debug(database)
