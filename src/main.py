@@ -2,115 +2,59 @@
 
 import logging
 import json
-from urllib.parse import urlparse
-from base64 import b64decode
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 from args import args
+import db
+import about
 import user
 import contest
-from var import cwd
+import problem
 
-tokenKey = 'tokenKey123'  # TODO: hide token key
+# Main HTTP server
+class Server(BaseHTTPRequestHandler):
+    # Send HTTP response
+    def send(self, code, body):
+        logging.debug(code)
+        logging.debug(body)
+        
+        self.send_response(code) # Send status code
 
-
-def about(_=None):  # Return info about server
-    return open(cwd+'about.json', 'r').read()
-
-
-class FileUploadRequestHandler(BaseHTTPRequestHandler):
-    def send(self, body, code=200):
-        logging.info(body)
-        if type(body) == tuple:  # Send status code with response body
-            self.send(*body)
-        elif type(body) == int:  # Send status code without response body
-            self.send_response(body)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-        else:  # Send response body
-            try:
-                body = json.loads(body)
-            except (TypeError, json.decoder.JSONDecodeError):
-                pass
-            body = json.dumps(body).encode('utf-8')
-            self.send_response(code)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(body)
-
-    def parse_headers(self):
-        try:
-            auth, auth_content = self.headers['Authorization'].split(' ', 1)
-            if auth == 'Basic':
-                username, password = b64decode(
-                    auth_content).decode('utf-8').split(':', 1)
-                return {'username': username, 'password': password}
-            elif auth == 'Bearer':
-                return {'token': auth_content}
-        except Exception:
-            return {}
-
-    def parse_query(self):
-        try:
-            return dict(qc.split("=") for qc in urlparse(self.path).query.split("&"))
-        except Exception:
-            return {}
-
-    def parse_body(self):
-        try:
-            # Get the size of data
-            content_length = int(self.headers['Content-Length'])
-            return json.loads(self.rfile.read(content_length).decode(
-                'ascii'))  # Get the data itself
-        except Exception:
-            return {}
-
-    def do_OPTIONS(self):  # Handle POST requests
-        self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers',
-                         'Authorization, Content-Type')
+
+        if not body == None:
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(body)))
+            self.wfile.write(body) # Send body
+        
         self.end_headers()
 
+    # Handle POST requests
     def do_POST(self):
-        self.handle_request()
+        # Decode request body
+        content_length = int(self.headers['Content-Length'])
+        body = json.loads(self.rfile.read(content_length).decode('utf-8'))
+        logging.debug(body)
 
-    def do_GET(self):
-        self.handle_request()
-
-    def handle_request(self):  # Handle requests
-        command, path = self.command, urlparse(self.path).path
-        auth, query, body = self.parse_headers(), self.parse_query(), self.parse_body()
-        body.update(auth)
-        body.update(query)
-        logging.info(body)
-        print(command, path, body)
-
-        routes = {
-            'POST': {  # POST Requests
-                '/user/register': user.register,
-                '/contest/submit': contest.submit,
-            },
-            'GET': {  # GET Requests
-                '/about': about,
-                '/user/login': user.login,
-                '/contest': contest.contests,
-                '/contest/info': contest.info,
-                '/contest/problems': contest.problems,
-                '/contest/solves': contest.solves,
-                '/contets/status': contest.status
-            }
+        requests = {
+            'about': about.about,
+            'contests': contest.contests,
+            'info': contest.info,
+            'problem': contest.problem,
+            'solves': contest.solves,
+            'register': user.register,
+            'authenticate': user.authenticate,
+            'authorize': user.authorize,
+            'submit': contest.submit,
+            'status': contest.status,
+            'history': contest.history,
+            'code': contest.code,
         }
-        self.send(routes.get(command, {}).get(
-            path.rstrip('/'), lambda _: 400)(body))
+        # Run the corresponding function and send the results
+        self.send(*requests.get(body['type'])(body))
 
-
-def run(server_class=ThreadingHTTPServer, handler_class=FileUploadRequestHandler):
-    server_address = ('localhost', args.port)
-    httpd = server_class(server_address, handler_class)
-    httpd.serve_forever()
-
-
-run()
+# Run the server
+server_address = ('localhost', args.port)
+httpd = ThreadingHTTPServer(server_address, Server)
+logging.info('Starting server')
+httpd.serve_forever()
