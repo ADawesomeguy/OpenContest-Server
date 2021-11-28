@@ -14,7 +14,7 @@ Also, you should run this server with a sandboxing program. Currently, only Fire
 For debugging, you can run the server with the `version` flag.
 
 ```
-usage: main.py [-h] [-v] [-p PORT] [-s SANDBOX] [--data-dir DATA_DIR] [--contests-dir CONTESTS_DIR] [--problems-dir PROBLEMS_DIR]
+usage: main.py [-h] [-v] [-p PORT] [-s SANDBOX] [-d DATA_DIR] [-c CONTESTS_DIR]
 
 Reference server implementation for the OpenContest protocol
 
@@ -24,10 +24,9 @@ optional arguments:
   -p PORT, --port PORT  Port to run the server on
   -s SANDBOX, --sandbox SANDBOX
                         Sandboxing program
-  --data-dir DATA_DIR   Data directory
-  --contests-dir CONTESTS_DIR
+  -d DATA_DIR, --data-dir DATA_DIR
+                        Data directory
+  -c CONTESTS_DIR, --contests-dir CONTESTS_DIR
                         Contests directory
-  --problems-dir PROBLEMS_DIR
-                        Problems directory
 ```
 

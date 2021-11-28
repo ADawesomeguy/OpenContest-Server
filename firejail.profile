@@ -52,12 +52,13 @@ seccomp
 # private-etc alternatives,fonts,machine-id
 # private-lib
 # private-opt none
-# private-tmp
+private-tmp
 
 dbus-user none
 dbus-system none
 
 # memory-deny-write-execute
-# read-only ${HOME}
+read-only ${HOME}
 
-whitelist ${HOME}/tmp
+whitelist /tmp/*.in
+whitelist /tmp/*.out

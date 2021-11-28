@@ -3,6 +3,7 @@
 import logging
 import os
 import subprocess
+import json
 
 from args import args
 from languages import languages
@@ -14,7 +15,7 @@ for name, description in languages.items():
 about = json.dumps(about)
 logging.debug(about)
 
-# Handle about requests
+# Handle about request
 # Return information about this OpenContest server
 def about():
     return (200, about)

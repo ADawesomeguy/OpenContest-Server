@@ -9,7 +9,6 @@ import db
 import about
 import user
 import contest
-import problem
 
 # Main HTTP server
 class Server(BaseHTTPRequestHandler):

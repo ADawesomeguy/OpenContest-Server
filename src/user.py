@@ -4,6 +4,7 @@ import os
 import hashlib
 import sqlite3
 from operator import itemgetter
+import requests
 
 from db import con, cur
 
@@ -18,7 +19,7 @@ tokens = dict()
 def hash(password, salt):
     return salt + hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
 
-# Handle register requests
+# Handle register request
 # Register a new user
 def register(data):
     try:
@@ -34,7 +35,7 @@ def register(data):
     con.commit()
     return (201, None)
 
-# Handle authenticate requests
+# Handle authenticate request
 # Verify username and password
 def authenticate(data):
     try:
@@ -56,7 +57,7 @@ def authenticate(data):
     
     return (403, None) # Incorrect password
 
-# Handle authorize requests
+# Handle authorize request
 # Verify token
 def authorize(data):
     try:
@@ -74,3 +75,11 @@ def authorize(data):
         return (200, None)
     
     return (403, None) # Incorrect token
+
+# Request an authorization
+def authorize_request(username, server, token):
+    return requests.post(server, json={
+        'type': 'authorize',
+        'username': username,
+        'token': token
+    }).status_code

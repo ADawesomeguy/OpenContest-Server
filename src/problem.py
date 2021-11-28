@@ -1,40 +1,60 @@
 #!/usr/bin/env python3
 
-def verdict(data, ver):  # Save verdict and send back result to the client
-    os.system('rm -rf ~/tmp')  # Clean up ~/tmp
+import os
+import requests
 
-    logging.info(ver)
+from db import con, cur
+from languages import languages
 
-    num = int(cur.execute('SELECT Count(*) FROM ' +
-                          data['contest']+'_submissions').fetchone()[0])
-    cur.execute('INSERT INTO '+data['contest']+'_submissions VALUES (?, ?, ?, ?, ?)',
-                (num, data['username'], data['problem'], data['code'], ver))
+# Get problem statement of local or remote problem
+def statement(contest, problem):
+    if '@' not in problem: # Local
+        return open(os.path.join(args.contests_dir, contest, problem, 'problem.pdf'), 'rb').read()
+    else: # Remote
+        server = problem.split('@')[1]
+        return requests.post(server, json={
+            'type': problem,
+            'contest': contest,
+            'problem': problem.split('@')[0]
+        }).text
 
-    if cur.execute('SELECT Count(*) FROM '+data['contest']+'_status WHERE username = ?', (data['username'],)).fetchone()[0] == 0:
-        command = 'INSERT INTO '+data['contest'] + \
-            '_status VALUES ("'+data['username']+'", '
-        for problem in os.listdir(cwd+data['contest']):
-            if os.path.isfile(cwd+contest+'/'+problem) or problem.startswith('.'):
-                continue
+# Process a submission
+def process(contest, problem, language, code):
+    number = int(cur.execute('SELECT Count(*) FROM ' + contest + '_submissions').fetchone()[0])
+
+    if '@' not in problem: # Local
+        verdict = run_local(contest, problem, language, code, number)
+    else: # Remote
+        verdict = run_remote(contest, problem, language, code, number)
+    
+    os.rmdir(os.path.join('/tmp', number))  # Clean up ~/tmp
+
+    logging.info(verdict)
+
+    cur.execute('INSERT INTO ' + contest + '_submissions VALUES (?, ?, ?, ?, ?)',
+                (number, username, problem, code, verdict))
+
+    if cur.execute('SELECT Count(*) FROM ' + contest +'_status WHERE username = ?', (username,)).fetchone()[0] == 0:
+        command = 'INSERT INTO ' + contest + '_status VALUES ("' + username + '", '
+        
+        problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
+        for problem in problems:
             command += '0, '
-        command = command[:-2]+')'
+        command = command[:-2] + ')'
         cur.execute(command)
-    cur.execute('UPDATE '+data['contest']+'_status SET P'+data['problem'] +
-                ' = ? WHERE username = ?', (str(ver), data['username'],))
+    
+    cur.execute('UPDATE '+ contest + '_status SET ' + problem + ' = ? WHERE username = ?', (str(verdict), username,))
     cur.commit()
-    return ver
 
+    return verdict
 
-def submit(data):  # Process a submission
-    if not user.authenticate(data) \
-            or data['contest'] not in os.listdir('contests') or not os.path.exists(cwd+data['contest']+'/'+data['problem']) \
-            or datetime.datetime.now() < datetime.datetime.fromisoformat(json.loads(open(cwd+data['contest']+'/info.json', 'r').read())['start-time']):
-        return 404
-
+# Run a program locally
+def run_local(contest, problem, language, code, number):
     # Save the program
-    os.system('mkdir ~/tmp -p')
-    with open(os.path.expanduser('~/tmp/main.'+languages[data['language']].extension), 'w') as f:
-        f.write(data['code'])
+    os.mkdir(os.path.join('/tmp', number))
+    with open(os.path.join('/tmp', number, 'main.' + language, 'w')) as f:
+        f.write(code)
+    
     # Sandboxing program
     if args.sandbox == 'firejail':
         sandbox = 'firejail --profile=firejail.profile bash -c '
@@ -42,36 +62,37 @@ def submit(data):  # Process a submission
         sandbox = 'bash -c '  # Dummy sandbox
 
     # Compile the code if needed
-    if languages[data['language']].compile_cmd != '':
-        ret = os.system('cd ~/tmp && timeout 10 ' +
-                        languages[data['language']].compile_cmd)
+    if not languages[language].compile == None:
+        ret = os.system('timeout 10 ' + languages[language].compile, cwd=os.path.join('/tmp', number))
         if ret:
-            verdict(data, 500)
-            return
+            return 500
 
-    tcdir = cwd+data['contest']+'/'+problem+'/'
-    with open(tcdir+'config.json') as f:
+    tcdir = os.path.join(args.contest_dir, contest, problem)
+    with open(os.path.join(tcdir, 'config.json')) as f:
         config = json.loads(f.read())
         time_limit = config['time-limit']
         memory_limit = config['memory-limit']
 
     tc = 1
-    while os.path.isfile(tcdir+str(tc)+'.in'):
+    while os.path.isfile(os.path.join(tcdir, str(tc) + '.in')):
+        # Link test data
+        os.symlink(os.path.join(tcdir, str(tc) + '.in'), os.join('/tmp', number, 'in'))
         # Run test case
-        os.system('ln '+tcdir+str(tc)+'.in ~/tmp/in')
-        ret = os.system('ulimit -v '+memory_limit+';'+sandbox+'"cd ~/tmp; timeout '+str(
-            time_limit/1000)+languages[data['language']].cmd+' < in > out";ulimit -v unlimited')
-        os.system('rm ~/tmp/in')
-        if ret != 0:
-            verdict(data, 408)  # Runtime error
-            return
+        ret = os.system('ulimit -v ' + memory_limit + '; ' + sandbox + '" timeout ' + str(time_limit / 1000) \
+            + languages[language].run + ' < in > out"; ulimit -v unlimited', cwd=os.path.join('/tmp', number))
+        os.remove(os.path.join('/tmp', number, 'in')) # Delete input
+        if not ret == 0:
+            return 408 # Runtime error
 
         # Diff the output with the answer
-        ret = os.system('diff -w ~/tmp/out '+tcdir+str(tc)+'.out')
-        os.system('rm ~/tmp/out')
-        if ret != 0:
-            verdict(data, 406)  # Wrong answer
-            return
+        ret = os.system('diff -w out ' + os.join(tcdir, str(tc) + '.out'))
+        os.remove(os.path.join('/tmp', number, 'out')) # Delete output
+        if not ret == 0:
+            return 406 # Wrong answer
         tc += 1
 
-    verdict(data, 202)  # All correct!
+    return 202  # All correct!
+
+# TODO: Run a program remotely
+def run_remote(contest, problem, language, code, number):
+    pass
