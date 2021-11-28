@@ -78,8 +78,9 @@ def run_local(contest, problem, language, code, number):
         # Link test data
         os.symlink(os.path.join(tcdir, str(tc) + '.in'), os.join('/tmp', number, 'in'))
         # Run test case
-        ret = os.system('ulimit -v ' + memory_limit + '; ' + sandbox + '" timeout ' + str(time_limit / 1000) \
-            + languages[language].run + ' < in > out"; ulimit -v unlimited', cwd=os.path.join('/tmp', number))
+        ret = os.system('ulimit -t ' + str(time_limit / 1000) + '; ' + 'systemd-run --user pm MemoryMax=' + memory_limit + \
+            ' -p RestrictNetworkInterfaces=any sh -c "' + languages[language].run + ' < in > out"; ulimit -t unlimited', \
+            cwd=os.path.join('/tmp', number))
         os.remove(os.path.join('/tmp', number, 'in')) # Delete input
         if not ret == 0:
             return 408 # Runtime error
