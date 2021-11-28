@@ -21,12 +21,7 @@ def hash(password, salt):
 
 # Handle register request
 # Register a new user
-def register(data):
-    try:
-        username, password, name, email = itemgetter('username', 'password', 'name', 'email')(data)
-    except KeyError:
-        return (400, None)
-    
+def register(name, email, username, password):    
     if cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] != 0:
         return (409, None)
     
@@ -37,12 +32,7 @@ def register(data):
 
 # Handle authenticate request
 # Verify username and password
-def authenticate(data):
-    try:
-        username, password = itemgetter('username', 'password')(data)
-    except KeyError:
-        return (400, None)
-
+def authenticate(username, password):
     users = cur.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchall()
     if len(users) == 0:
         return (404, None) # Username not found
@@ -59,12 +49,7 @@ def authenticate(data):
 
 # Handle authorize request
 # Verify token
-def authorize(data):
-    try:
-        username, token = itemgetter('username', 'token')(data)
-    except KeyError:
-        return (400, None)
-    
+def authorize(username, token):
     if cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] == 0:
         return (404, None) # Username not found
     
@@ -77,7 +62,7 @@ def authorize(data):
     return (403, None) # Incorrect token
 
 # Request an authorization
-def authorize_request(username, server, token):
+def authorize_request(username, homeserver, token):
     return requests.post(server, json={
         'type': 'authorize',
         'username': username,

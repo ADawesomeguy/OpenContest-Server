@@ -3,12 +3,31 @@
 import logging
 import json
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from inspect import signature
+from operator import itemgetter
+from datetime import datetime
 
 from args import args
 import db
 import about
 import user
 import contest
+
+# OpenContest requests
+requests = {
+    'about': about.about,
+    'contests': contest.contests,
+    'info': contest.info,
+    'problem': contest.problem,
+    'solves': contest.solves,
+    'register': user.register,
+    'authenticate': user.authenticate,
+    'authorize': user.authorize,
+    'submit': contest.submit,
+    'status': contest.status,
+    'history': contest.history,
+    'code': contest.code
+}
 
 # Main HTTP server
 class Server(BaseHTTPRequestHandler):
@@ -35,22 +54,41 @@ class Server(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(content_length).decode('utf-8'))
         logging.debug(body)
 
-        requests = {
-            'about': about.about,
-            'contests': contest.contests,
-            'info': contest.info,
-            'problem': contest.problem,
-            'solves': contest.solves,
-            'register': user.register,
-            'authenticate': user.authenticate,
-            'authorize': user.authorize,
-            'submit': contest.submit,
-            'status': contest.status,
-            'history': contest.history,
-            'code': contest.code,
-        }
+        self.send(*process(body)) # Process request and send back results
+    
+    # Process a request
+    def process(body):
+        if 'type' not in body:
+            return (400, None) # Bad request
+        if body['type'] not in requests:
+            return (501, None) # Not implemented
+        
+        # Check if all required parameters are in the request
+        parameters = signature(requests[body['type']])[1:-1]
+        try:
+            eval(parameters.replace(',', '') + ' = itemgetter(' + parameters + ')(body)')
+        except KeyError:
+            return (400, None) # Bad request
+        
+        # Check token
+        if token != None:
+            authorization = user.authorize_request(username, homeserver, token)
+            if not authorization == 200:
+                return (authorization, None) # Not authorized
+        
+        # Check if contest exists
+        if contest != None:
+            if not os.path.isdir(os.path.join(args.contests_dir, contest)):
+                return (404, None) # Contest not found
+        
+        # Check if problem exists
+        if problem != None:
+            info = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))
+            if problem not in info['problems'] or datetime.now() < datetime.fromisoformat(info['start-time']):
+                return (404, None) # Problem not found
+
         # Run the corresponding function and send the results
-        self.send(*requests.get(body['type'])(body))
+        self.send(eval(requests[body['type']] + '(' + parameters + ')'))
 
 # Run the server
 server_address = ('localhost', args.port)

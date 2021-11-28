@@ -3,13 +3,11 @@
 import logging
 import os
 import json
-from datetime import dattime
-from operator import itemgetter
 
 from args import args
 from db import con, cur
 from user import authorize_request
-from problem import test
+import problem
 
 # Create contest status table
 for contest in os.listdir(args.contests_dir):
@@ -32,7 +30,7 @@ for contest in os.listdir(args.contests_dir):
 
 # Handle contests request
 # Return contests on this server
-def contests(data):
+def contests():
     contests = []
     for contest in os.listdir(args.contests_dir):
         if contest.startswith('.'): continue # Skip "hidden" contests
@@ -41,45 +39,17 @@ def contests(data):
 
 # Handle info request
 # Return information about a contest
-def info(data):
-    try:
-        contest = data['contest']
-    except KeyError:
-        return (400, None)
-
-    try:
-        return (200, open(os.path.join(args.contests_dir, contest, 'info.json'), 'r').read())
-    except (NotADirectoryError, FileNotFoundError):
-        return (404, None)
+def info(contest):
+    return (200, open(os.path.join(args.contests_dir, contest, 'info.json'), 'r').read())
 
 # Handle problem request
 # Returns a problems statement
-def problem(data):
-    try:
-        contest, problem = itemgetter('contest', 'problem')(data)
-    except KeyError:
-        return (400, None)
-    
-    try:
-        problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
-    except NotADirectoryError:
-        return (404, None)
-    if problem not in problems:
-        return (404, None)
-    
+def problem(contest, problem):
     return (200, problem.statement(contest, problem))
 
 # Handle solves request
 # Return number of solves for each problem
-def solves(data):
-    try:
-        contest = data['contest']
-    except KeyError:
-        return 400
-    
-    if not os.path.isdir(os.path.join(args.contests_dir, contest)):
-        return 404
-    
+def solves(contest):    
     solves = dict()
     problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
     for problem in problems:
@@ -89,71 +59,25 @@ def solves(data):
 
 # Handle submit request
 # Process a code submission
-def submit(data):
-    try:
-        username, server, token, contest, problem, language, code = itemgetter(
-            'username', 'server', 'token', 'contest', 'problem', 'language', code)[data]
-    except KeyError:
-        return (400, None)
-    
-    authorization = user.authorize_request(username, server, token)
-    if not authorization == 200:
-        return (authorization, None)
-    
-    try:
-        problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
-    except NotADirectoryError:
-        return (404, None)
-    if problem not in problems or datetime.now() < datetime.fromisoformat(json.loads(
-        open(os.path.join(args.contests_dir, contest, 'info.json'), 'r').read())['start-time']):
-        return (404, None)
-
-    problem.process(contest, problem, language, code)
+def submit(username, homeserver, token, contest, problem, language, code):
+    return problem.process(contest, problem, language, code)
 
 # Handle status request
 # Return user status
-def status(data):
-    try:
-        username, server, token, contest = itemgetter('username', 'server', 'token', 'contest')(data)
-    except KeyError:
-        return (400, None)
-
-    authorization = user.authorize_request(username, server, token)
-    if not authorization == 200:
-        return (authorization, None)
-    
+def status(username, homeserver, token, contest):
     status = cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ?', (username,)).fetchall()
     return (200, status)
 
 # Handle history request
 # Return user submission history
-def history(data):
-    try:
-        username, server, token, contest = itemgetter('username', 'server', 'token', 'contest')(data)
-    except KeyError:
-        return (400, None)
-
-    authorization = user.authorize_request(username, server, token)
-    if not authorization == 200:
-        return (authorization, None)
-    
+def history(username, homeserver, token, contest, all):
     history = cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
                           '_submissions WHERE username = ?', (username,)).fetchall()
     return (200, history)
 
 # Handle code request
 # Return the code for a particular submission
-def code(data):
-    try:
-        username, server, token, contest, number = itemgetter(
-            'username', 'server', 'token', 'contest', 'number')(data)
-    except KeyError:
-        return (400, None)
-
-    authorization = user.authorize_request(username, server, token)
-    if not authorization == 200:
-        return (authorization, None)
-    
+def code(username, homeserver, token, contest, number):
     code = cur.execute('SELECT "code" FROM ' + contest + '_submissions WHERE username = ? AND number = ?',
                        (username, number)).fetchone()[0]
     return (200, code)
