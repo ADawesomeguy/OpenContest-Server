@@ -23,7 +23,6 @@ def contests():
         contests.append(contest)
     return (200, json.dumps(contests))
 
-
 # Handle info request
 # Return information about a contest
 def info(contest):
@@ -41,8 +40,14 @@ def solves(contest):
     problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
     for problem in problems:
         solves[problem] = cur.execute(
-            'SELECT COUNT(*) FROM ' + contest + '_status WHERE P' + problem + ' = 202').fetchone()[0]
-    return json.dumps(solves)
+            'SELECT COUNT(*) FROM ' + contest + '_status WHERE ' + problem + ' = 202').fetchone()[0]
+    return (200, json.dumps(solves))
+
+# Handle history request
+# Return submissions history
+def history(contest):
+    history = cur.execute('SELECT "number","problem","verdict" FROM ' + contest + '_submissions').fetchall()
+    return (200, history)
 
 # Handle register request
 # Register a new user
@@ -97,12 +102,12 @@ def status(username, homeserver, token, contest):
     status = cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ?', (username,)).fetchall()
     return (200, status)
 
-# Handle history request
+# Handle submissions request
 # Return user submission history
-def history(username, homeserver, token, contest, all):
-    history = cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
-                          '_submissions WHERE username = ?', (username,)).fetchall()
-    return (200, history)
+def submissions(username, homeserver, token, contest, all):
+    submissions = cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
+                              '_submissions WHERE username = ?', (username,)).fetchall()
+    return (200, submissions)
 
 # Handle code request
 # Return the code for a particular submission
