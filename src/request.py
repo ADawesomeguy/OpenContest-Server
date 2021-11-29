@@ -41,7 +41,7 @@ def solves(contest):
     problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
     for problem in problems:
         solves[problem] = cur.execute(
-            'SELECT COUNT(*) FROM '+contest+'_status WHERE P'+problem+' = 202').fetchone()[0]
+            'SELECT COUNT(*) FROM ' + contest + '_status WHERE P' + problem + ' = 202').fetchone()[0]
     return json.dumps(solves)
 
 # Handle register request

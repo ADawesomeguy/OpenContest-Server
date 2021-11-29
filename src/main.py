@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import json
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from inspect import signature
@@ -49,18 +50,18 @@ class Server(BaseHTTPRequestHandler):
                 return 400 # Bad request
         
         # Check token
-        if 'token' in vars():
+        if 'token' in locals():
             authorization = user.authorize_request(username, homeserver, token)
             if not authorization == 200:
                 return authorization # Not authorized
         
         # Check if contest exists
-        if 'contest' in vars():
+        if 'contest' in locals():
             if not os.path.isdir(os.path.join(args.contests_dir, contest)):
                 return 404 # Contest not found
         
         # Check if problem exists
-        if 'problem' in vars():
+        if 'problem' in locals():
             info = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))
             if problem not in info['problems'] or datetime.now() < datetime.fromisoformat(info['start-time']):
                 return 404 # Problem not found
