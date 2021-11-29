@@ -65,7 +65,10 @@ class Server(BaseHTTPRequestHandler):
                 return 404 # Problem not found
 
         # Run the corresponding function and send the results
-        return eval('request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
+        if parameters == '':
+            return eval('request.' + body['type'] + '()')
+        else:
+            return eval('request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
 
     # Handle POST requests
     def do_POST(self):
