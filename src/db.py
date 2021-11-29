@@ -8,7 +8,7 @@ from sqlite3 import connect
 from args import args
 
 # Prepare database
-database = os.path.join(args.data_dir, 'data.db')
+database = os.path.join(args.data_dir, 'ocs.db')
 logging.debug(database)
 con = connect(database, check_same_thread=False)
 cur = con.cursor()
