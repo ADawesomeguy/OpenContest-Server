@@ -5,14 +5,14 @@ Reference backend server implementation for the [OpenContest protocol](https://g
 
 ## Usage
 
-Run the server with `src/main.py`. You can place contests like the [sample contest](https://github.com/LadueCS/Test) in a `contests` directory.
+Install the server with `pip` or clone this repository. Run the server with `ocs` or `src/main.py`. You can place contests like the [sample contest](https://github.com/LadueCS/Test) in a `contests` directory.
 
 It is highly recommended to put this server behind a reverse proxy like nginx because HTTPServer does not implement any security features.
 
 For debugging, you can run the server with the `version` flag.
 
 ```
-usage: main.py [-h] [-v] [-p PORT] [-d DATA_DIR] [-c CONTESTS_DIR]
+usage: ocs [-h] [-v] [-p PORT] [-d DATA_DIR] [-c CONTESTS_DIR]
 
 Reference server implementation for the OpenContest protocol
 

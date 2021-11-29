@@ -22,7 +22,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'opencontest-server = main:__main__',
+            'ocs = main:__main__',
         ],
     }
 )
