@@ -43,31 +43,29 @@ class Server(BaseHTTPRequestHandler):
         
         # Check if all required parameters are in the request
         parameters = str(signature(eval('request.' + body['type'])))[1:-1]
-        if parameters != '':
-            try:
-                exec(parameters + ' = itemgetter("' + parameters.replace(', ', '", "') + '")(body)')
-            except KeyError:
+        for parameter in parameters.split():
+            if parameter.replace(',', '') not in body:
                 return 400 # Bad request
 
         # Check token
-        if 'token' in locals():
-            authorization = user.authorize_request(username, homeserver, token)
+        if 'token' in body:
+            authorization = user.authorize_request(body['username'], body['homeserver'], body['token'])
             if not authorization == 200:
                 return authorization # Not authorized
         
         # Check if contest exists
-        if 'contest' in locals():
-            if not os.path.isdir(os.path.join(args.contests_dir, contest)):
+        if 'contest' in body:
+            if not os.path.isdir(os.path.join(args.contests_dir, body['contest'])):
                 return 404 # Contest not found
         
         # Check if problem exists
-        if 'problem' in locals():
-            info = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))
+        if 'problem' in body:
+            info = json.load(open(os.path.join(args.contests_dir, body['contest'], 'info.json'), 'r'))
             if problem not in info['problems'] or datetime.now() < datetime.fromisoformat(info['start-time']):
                 return 404 # Problem not found
 
         # Run the corresponding function and send the results
-        return eval('request.' + body['type'] + '(' + parameters + ')')
+        return eval('request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
 
     # Handle POST requests
     def do_POST(self):
