@@ -6,6 +6,7 @@ import json
 from args import args
 from db import con, cur
 from about import about_server
+from user import hash, authorize_request
 import problem
 
 # Handle about request

@@ -13,7 +13,11 @@ import request
 # Main HTTP server
 class Server(BaseHTTPRequestHandler):
     # Send HTTP response
-    def send(self, code, body=None):
+    def send(self, result):
+        if type(result) == int:
+            code,body = result, None
+        else:
+            code,body = result.split()
         logging.debug(code)
         logging.debug(body)
         
@@ -21,15 +25,14 @@ class Server(BaseHTTPRequestHandler):
 
         self.send_header('Access-Control-Allow-Origin', '*')
 
-        if not body == None:
+        if body == None:
+            self.end_headers()
+        else:
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
             self.wfile.write(body.encode('utf-8')) # Send body
-        else:
-            self.end_headers()
-        
-
+    
     # Process a request
     def process(self, body):
         if 'type' not in body:
@@ -41,7 +44,7 @@ class Server(BaseHTTPRequestHandler):
         parameters = str(signature(eval('request.' + body['type'])))[1:-1]
         if parameters != '':
             try:
-                eval(parameters.replace(',', '') + ' = itemgetter(' + parameters + ')(body)')
+                exec(parameters + ' = itemgetter("' + parameters.replace(', ', '", "') + '")(body)')
             except KeyError:
                 return 400 # Bad request
         
@@ -72,7 +75,7 @@ class Server(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(content_length).decode('utf-8'))
         logging.debug(body)
 
-        self.send(*self.process(body)) # Process request and send back results
+        self.send(self.process(body)) # Process request and send back results
 
 # Run the server
 server_address = ('localhost', args.port)
