@@ -33,9 +33,9 @@ class Server(BaseHTTPRequestHandler):
     # Process a request
     def process(self, body):
         if 'type' not in body:
-            return (400, None) # Bad request
+            return 400 # Bad request
         if body['type'] not in dir(request):
-            return (501, None) # Not implemented
+            return 500 # Not implemented
         
         # Check if all required parameters are in the request
         parameters = str(signature(eval('request.' + body['type'])))[1:-1]
@@ -43,24 +43,24 @@ class Server(BaseHTTPRequestHandler):
             try:
                 eval(parameters.replace(',', '') + ' = itemgetter(' + parameters + ')(body)')
             except KeyError:
-                return (400, None) # Bad request
+                return 400 # Bad request
         
         # Check token
         if 'token' in vars():
             authorization = user.authorize_request(username, homeserver, token)
             if not authorization == 200:
-                return (authorization, None) # Not authorized
+                return authorization # Not authorized
         
         # Check if contest exists
         if 'contest' in vars():
             if not os.path.isdir(os.path.join(args.contests_dir, contest)):
-                return (404, None) # Contest not found
+                return 404 # Contest not found
         
         # Check if problem exists
         if 'problem' in vars():
             info = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))
             if problem not in info['problems'] or datetime.now() < datetime.fromisoformat(info['start-time']):
-                return (404, None) # Problem not found
+                return 404 # Problem not found
 
         # Run the corresponding function and send the results
         return eval('request.' + body['type'] + '(' + parameters + ')')

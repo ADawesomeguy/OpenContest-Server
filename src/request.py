@@ -47,19 +47,19 @@ def solves(contest):
 # Register a new user
 def register(name, email, username, password):    
     if cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] != 0:
-        return (409, None)
+        return 409
     
     cur.execute('INSERT INTO users VALUES (?, ?, ?, ?)',
         (name, email, username, hash(password, os.urandom(32))))
     con.commit()
-    return (201, None)
+    return 201
 
 # Handle authenticate request
 # Verify username and password
 def authenticate(username, password):
     users = cur.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchall()
     if len(users) == 0:
-        return (404, None) # Username not found
+        return 404 # Username not found
     
     if users[0][3] == hash(password, users[0][3][:32]):
         # Create and save token
@@ -69,13 +69,13 @@ def authenticate(username, password):
         tokens[username].add(token)
         return (200, token)
     
-    return (403, None) # Incorrect password
+    return 403 # Incorrect password
 
 # Handle authorize request
 # Verify token
 def authorize(username, token):
     if cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] == 0:
-        return (404, None) # Username not found
+        return 404 # Username not found
     
     if username not in tokens:
         tokens[username] = set()
@@ -83,7 +83,7 @@ def authorize(username, token):
         tokens[username].remove(token)
         return (200, None)
     
-    return (403, None) # Incorrect token
+    return 403 # Incorrect token
 
 # Handle submit request
 # Process a code submission
