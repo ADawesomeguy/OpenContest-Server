@@ -29,10 +29,12 @@ class Server(BaseHTTPRequestHandler):
         if body == None:
             self.end_headers()
         else:
+            if type(body) == str:
+                body = body.encode('utf-8')
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
-            self.wfile.write(body.encode('utf-8')) # Send body
+            self.wfile.write(body) # Send body
     
     # Process a request
     def process(self, body):
@@ -61,7 +63,7 @@ class Server(BaseHTTPRequestHandler):
         # Check if problem exists
         if 'problem' in body:
             info = json.load(open(os.path.join(args.contests_dir, body['contest'], 'info.json'), 'r'))
-            if problem not in info['problems'] or datetime.now() < datetime.fromisoformat(info['start-time']):
+            if body['problem'] not in info['problems'] or datetime.now().timestamp() < datetime.fromisoformat(info['start-time']).timestamp():
                 return 404 # Problem not found
 
         # Run the corresponding function and send the results

@@ -7,7 +7,7 @@ from args import args
 from db import con, cur
 from about import about_server
 from user import hash, authorize_request
-import problem
+from problem import statement
 
 # Handle about request
 # Return information about this OpenContest server
@@ -32,7 +32,7 @@ def info(contest):
 # Handle problem request
 # Returns a problems statement
 def problem(contest, problem):
-    return (200, problem.statement(contest, problem))
+    return (200, statement(contest, problem))
 
 # Handle solves request
 # Return number of solves for each problem
