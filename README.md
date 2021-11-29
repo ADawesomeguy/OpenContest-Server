@@ -10,19 +10,3 @@ Install the server with `pip` or clone this repository. Run the server with `ocs
 It is highly recommended to put this server behind a reverse proxy like nginx because HTTPServer does not implement any security features.
 
 For debugging, you can run the server with the `version` flag.
-
-```
-usage: ocs [-h] [-v] [-p PORT] [-d DATA_DIR] [-c CONTESTS_DIR]
-
-Reference server implementation for the OpenContest protocol
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --verbose         Enable verbose logging
-  -p PORT, --port PORT  Port to run the server on
-  -d DATA_DIR, --data-dir DATA_DIR
-                        Data directory
-  -c CONTESTS_DIR, --contests-dir CONTESTS_DIR
-                        Contests directory
-```
-

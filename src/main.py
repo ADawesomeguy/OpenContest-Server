@@ -18,7 +18,7 @@ class Server(BaseHTTPRequestHandler):
         if type(result) == int:
             code,body = result, None
         else:
-            code,body = result.split()
+            code,body = result
         logging.debug(code)
         logging.debug(body)
         
@@ -48,7 +48,7 @@ class Server(BaseHTTPRequestHandler):
                 exec(parameters + ' = itemgetter("' + parameters.replace(', ', '", "') + '")(body)')
             except KeyError:
                 return 400 # Bad request
-        
+
         # Check token
         if 'token' in locals():
             authorization = user.authorize_request(username, homeserver, token)
