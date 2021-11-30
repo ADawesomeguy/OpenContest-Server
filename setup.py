@@ -4,7 +4,7 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='OpenContest-Server',
+    name='opencontest-server',
     version='2.1.0',
     author='Anthony Wang',
     author_email='ta180m@pm.me',
