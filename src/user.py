@@ -12,7 +12,7 @@ def hash(password, salt):
 
 # Request an authorization
 def authorize_request(username, homeserver, token):
-    return requests.post(homeserver, json={
+    return requests.post('https://' + homeserver, json={
         'type': 'authorize',
         'username': username,
         'token': token

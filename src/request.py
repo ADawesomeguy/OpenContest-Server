@@ -2,11 +2,12 @@
 
 import os
 import json
+from secrets import token_hex
 
 from args import args
 from db import con, cur
 from about import about_server
-from user import hash, authorize_request
+from user import hash, tokens
 from problem import statement
 
 # Handle about request
@@ -25,36 +26,44 @@ def contests():
 
 # Handle info request
 # Return information about a contest
-def info(contest):
-    return (200, open(os.path.join(args.contests_dir, contest, 'info.json'), 'r').read())
+def info(contest, problem=None):
+    if problem == None:
+        return (200, open(os.path.join(args.contests_dir, contest, 'info.json'), 'r').read())
+    return (200, open(os.path.join(args.contests_dir, contest, problem, 'info.json'), 'r').read())
 
 # Handle problem request
 # Returns a problems statement
-def problem(contest, problem):
+def problem(contest, problem=None):
     return (200, statement(contest, problem))
 
 # Handle solves request
 # Return number of solves for each problem
-def solves(contest):    
-    solves = dict()
-    problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
-    for problem in problems:
-        solves[problem] = cur.execute(
-            'SELECT COUNT(*) FROM ' + contest + '_status WHERE ' + problem + ' = 202').fetchone()[0]
-    return (200, json.dumps(solves))
+def solves(contest, problem=None):
+    if problem == None:    
+        solves = dict()
+        problems = json.load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
+        for problem in problems:
+            solves[problem] = cur.execute(
+                'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0]
+        return (200, json.dumps(solves))
+    return (200, cur.execute(
+        'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0])
 
 # Handle history request
 # Return submissions history
-def history(contest):
-    history = cur.execute('SELECT "number","problem","verdict" FROM ' + contest + '_submissions').fetchall()
-    return (200, history)
+def history(contest, problem=None):
+    if problem == None:
+        return (200, cur.execute(
+            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions"').fetchall())
+    else:
+        return (200, cur.execute(
+            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall())
 
 # Handle register request
 # Register a new user
 def register(name, email, username, password):    
-    if cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] != 0:
+    if cur.execute('SELECT Count(*) FROM users WHERE username = ?', (username,)).fetchone()[0] != 0:
         return 409
-    
     cur.execute('INSERT INTO users VALUES (?, ?, ?, ?)',
         (name, email, username, hash(password, os.urandom(32))))
     con.commit()
@@ -66,29 +75,24 @@ def authenticate(username, password):
     users = cur.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchall()
     if len(users) == 0:
         return 404 # Username not found
-    
     if users[0][3] == hash(password, users[0][3][:32]):
-        # Create and save token
-        token = os.urandom(32).encode('base-64')
+        token = token_hex(32)
         if username not in tokens:
             tokens[username] = set()
         tokens[username].add(token)
-        return (200, token)
-    
+        return (200, token) 
     return 403 # Incorrect password
 
 # Handle authorize request
 # Verify token
 def authorize(username, token):
-    if cur.execute('SELECT Count(*) FROM users WHERE username=?', (username,)).fetchone()[0] == 0:
+    if cur.execute('SELECT Count(*) FROM users WHERE username = ?', (username,)).fetchone()[0] == 0:
         return 404 # Username not found
-    
     if username not in tokens:
         tokens[username] = set()
     if token in tokens[username]:
         tokens[username].remove(token)
         return (200, None)
-    
     return 403 # Incorrect token
 
 # Handle submit request
@@ -98,21 +102,24 @@ def submit(username, homeserver, token, contest, problem, language, code):
 
 # Handle status request
 # Return user status
-def status(username, homeserver, token, contest):
-    status = cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ?', (username,)).fetchall()
-    return (200, status)
+def status(username, homeserver, token, contest, problem=None):
+    if problem == None:
+        return (200, cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ?',
+            (username,)).fetchall())
+    return (200, cur.execute('SELECT * FROM ' + contest +
+        '_status WHERE username = ? AND problem = ?', (username, problem)).fetchall())
 
 # Handle submissions request
 # Return user submission history
-def submissions(username, homeserver, token, contest, all):
-    submissions = cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
-                              '_submissions WHERE username = ?', (username,)).fetchall()
-    return (200, submissions)
+def submissions(username, homeserver, token, contest, problem=None):
+    if problem == None:
+        return (200, cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
+            '_submissions WHERE username = ?', (username,)).fetchall())
+    return (200, cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
+            '_submissions WHERE username = ? AND problem = ?', (username, problem)).fetchall())
 
 # Handle code request
 # Return the code for a particular submission
 def code(username, homeserver, token, contest, number):
-    code = cur.execute('SELECT "code" FROM ' + contest + '_submissions WHERE username = ? AND number = ?',
-                       (username, number)).fetchone()[0]
-    return (200, code)
-
+    return (200, cur.execute('SELECT "code" FROM ' + contest +
+        '_submissions WHERE username = ? AND number = ?', (username, number)).fetchone()[0])

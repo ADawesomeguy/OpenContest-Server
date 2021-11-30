@@ -10,6 +10,7 @@ from datetime import datetime
 
 from args import args
 import request
+from user import authorize_request
 
 # Main HTTP server
 class Server(BaseHTTPRequestHandler):
@@ -46,12 +47,16 @@ class Server(BaseHTTPRequestHandler):
         # Check if all required parameters are in the request
         parameters = str(signature(eval('request.' + body['type'])))[1:-1]
         for parameter in parameters.split():
-            if parameter.replace(',', '') not in body:
-                return 400 # Bad request
+            if 'None' in parameter: # Optional parameter
+                if paramter.replace('=None', '') not in body:
+                    parameters = parameters.replace(parameter, '') # Remove it
+            else:
+                if parameter.replace(',', '') not in body:
+                    return 400 # Bad request
 
         # Check token
-        if 'token' in body:
-            authorization = user.authorize_request(body['username'], body['homeserver'], body['token'])
+        if 'token' in body and not body['type'] == 'authorize':
+            authorization = authorize_request(body['username'], body['homeserver'], body['token'])
             if not authorization == 200:
                 return authorization # Not authorized
         
