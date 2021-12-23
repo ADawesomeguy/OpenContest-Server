@@ -24,6 +24,6 @@ languages = {
     'go':   language('go version | cut -d" " -f3 | cut -c 3-',   './main',       'go build main.go'),
     'rs':   language('rustc -V | cut -d" " -f2',                 './main',       'rustc main.rs'),
     'lua':  language('lua -v | cut -d" " -f2',                   'lua main.lua'),
-    'jl':   language('julia -v | cut -d" " -f3',                'julia main.jl'),
+    'jl':   language('julia -v | cut -d" " -f3',                 'julia main.jl'),
     'sh':   language('bash --version | head -n1 | cut -d" " -f4','bash main.sh', 'chmod +x main.sh')
 }
