@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import os
-import requests
+from subprocess import run
+from requests import post
 
 from args import args
 from db import con, cur
@@ -13,7 +14,7 @@ def statement(contest, problem):
         return open(os.path.join(args.contests_dir, contest, problem, 'problem.pdf'), 'rb').read()
     else: # Remote
         server = problem.split('@')[1]
-        return requests.post(server, json={
+        return post(server, json={
             'type': problem,
             'contest': contest,
             'problem': problem.split('@')[0]
@@ -64,7 +65,7 @@ def run_local(contest, problem, language, code, number):
 
     # Compile the code if needed
     if not languages[language].compile == None:
-        ret = os.system('timeout 10 ' + languages[language].compile, cwd=os.path.join('/tmp', number))
+        ret = run('timeout 10 ' + languages[language].compile, shell=True, cwd=os.path.join('/tmp', number))
         if ret:
             return 500
 
@@ -79,15 +80,15 @@ def run_local(contest, problem, language, code, number):
         # Link test data
         os.symlink(os.path.join(tcdir, str(tc) + '.in'), os.join('/tmp', number, 'in'))
         # Run test case
-        ret = os.system('ulimit -t ' + str(time_limit / 1000) + '; ' + 'systemd-run --user pm MemoryMax=' + memory_limit + \
+        ret = run('ulimit -t ' + str(time_limit / 1000) + '; ' + 'systemd-run --user pm MemoryMax=' + memory_limit + \
             ' -p RestrictNetworkInterfaces=any sh -c "' + languages[language].run + ' < in > out"; ulimit -t unlimited', \
-            cwd=os.path.join('/tmp', number))
+            shell=True, cwd=os.path.join('/tmp', number))
         os.remove(os.path.join('/tmp', number, 'in')) # Delete input
         if not ret == 0:
             return 408 # Runtime error
 
         # Diff the output with the answer
-        ret = os.system('diff -w out ' + os.join(tcdir, str(tc) + '.out'))
+        ret = run('diff -w out ' + os.join(tcdir, str(tc) + '.out'), shell=True)
         os.remove(os.path.join('/tmp', number, 'out')) # Delete output
         if not ret == 0:
             return 406 # Wrong answer
