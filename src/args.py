@@ -6,7 +6,8 @@ from argparse import ArgumentParser
 
 
 # Set up arguments
-parser = ArgumentParser(description='Reference server implementation for the OpenContest protocol')
+parser = ArgumentParser(
+    description='Reference server implementation for the OpenContest protocol')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='Enable verbose logging')
 parser.add_argument('-p', '--port', default=6000,

@@ -12,12 +12,13 @@ from args import args
 import request
 from user import authorize_request
 
+
 class Server(BaseHTTPRequestHandler):
     """Main HTTP server"""
-    
+
     def send(self, result):
         """Send HTTP response"""
-        if type(result) == int:
+        if isinstance(result, int):
             code, body = result, None
         else:
             code, body = result
@@ -28,10 +29,10 @@ class Server(BaseHTTPRequestHandler):
 
         self.send_header('Access-Control-Allow-Origin', '*')
 
-        if body == None:
+        if body is None:
             self.end_headers()
         else:
-            if type(body) == str:
+            if isinstance(body, str):
                 body = body.encode('utf-8')
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(body)))
@@ -65,21 +66,24 @@ class Server(BaseHTTPRequestHandler):
 
         # Check if contest exists
         if 'contest' in body:
-            if not os.path.isdir(os.path.join(args.contests_dir, body['contest'])):
+            if not os.path.isdir(os.path.join(
+                    args.contests_dir, body['contest'])):
                 return 404  # Contest not found
 
         # Check if problem exists
         if 'problem' in body:
             info = json.load(
                 open(os.path.join(args.contests_dir, body['contest'], 'info.json'), 'r'))
-            if body['problem'] not in info['problems'] or datetime.now().timestamp() < datetime.fromisoformat(info['start-time']).timestamp():
+            if body['problem'] not in info['problems'] or datetime.now(
+            ).timestamp() < datetime.fromisoformat(info['start-time']).timestamp():
                 return 404  # Problem not found
 
         # Run the corresponding function and send the results
         if parameters == '':
             return eval('request.' + body['type'] + '()')
         else:
-            return eval('request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
+            return eval(
+                'request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
 
     def do_OPTIONS(self):
         """Handle CORS"""

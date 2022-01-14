@@ -9,6 +9,7 @@ class language:
         self.run = run
         self.compile = compile
 
+
 # TODO: Support more languages
 languages = {
     # Language       Version                                     Run             Compile
