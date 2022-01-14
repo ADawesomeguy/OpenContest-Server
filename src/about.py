@@ -8,8 +8,13 @@ from args import args
 from languages import languages
 
 # Construct about object
-about_server = { 'version': '2.1.0', 'languages': dict() }
+about_server = {'version': check_output('git describe --long --tags | \
+                sed \'s/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g\'', shell=True).decode('utf-8'),
+                'languages': dict()}
+
 for name, description in languages.items():
-    about_server['languages'][name] = check_output(description.version, shell=True).decode('utf-8')[:-1]
+    about_server['languages'][name] = check_output(
+        description.version, shell=True).decode('utf-8')[:-1]
+
 about_server = json.dumps(about_server)
 logging.debug(about_server)
