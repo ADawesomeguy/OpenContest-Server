@@ -2,6 +2,7 @@
 data
 contests
 problems
+tests
 .vscode
 .DS_Store
 
