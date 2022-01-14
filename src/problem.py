@@ -8,8 +8,10 @@ from args import args
 from db import con, cur
 from languages import languages
 
-# Get problem statement of local or remote problem
+
 def statement(contest, problem):
+    """Get problem statement of local or remote problem"""
+
     if '@' not in problem: # Local
         return open(os.path.join(args.contests_dir, contest, problem, 'problem.pdf'), 'rb').read()
     else: # Remote
@@ -20,8 +22,10 @@ def statement(contest, problem):
             'problem': problem.split('@')[0]
         }).text
 
-# Process a submission
+
 def process(contest, problem, language, code):
+    """Process a submission"""
+
     number = int(cur.execute('SELECT Count(*) FROM ' + contest + '_submissions').fetchone()[0])
 
     if '@' not in problem: # Local
@@ -50,8 +54,10 @@ def process(contest, problem, language, code):
 
     return verdict
 
-# Run a program locally
+
 def run_local(contest, problem, language, code, number):
+    """Run a program locally"""
+
     # Save the program
     os.mkdir(os.path.join('/tmp', number))
     with open(os.path.join('/tmp', number, 'main.' + language, 'w')) as f:
@@ -96,6 +102,8 @@ def run_local(contest, problem, language, code, number):
 
     return 202  # All correct!
 
-# TODO: Run a program remotely
+
 def run_remote(contest, problem, language, code, number):
+    """TODO: Run a program remotely"""
+    
     pass

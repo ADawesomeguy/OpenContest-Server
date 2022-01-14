@@ -7,6 +7,7 @@ from sqlite3 import connect
 
 from args import args
 
+
 # Prepare database
 database = os.path.join(args.data_dir, 'ocs.db')
 logging.debug(database)
@@ -18,8 +19,10 @@ logging.info('Database connected')
 cur.execute(
     'CREATE TABLE IF NOT EXISTS users (username text unique, name text, email text unique, password text)')
 
-# Create contest status table
+
 for contest in os.listdir(args.contests_dir):
+    """Create contest status table"""
+
     if contest.startswith('.'):
         continue # Skip "hidden" contests
     

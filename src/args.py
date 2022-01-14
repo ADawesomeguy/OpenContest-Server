@@ -4,6 +4,7 @@ import logging
 import os
 from argparse import ArgumentParser
 
+
 # Set up arguments
 parser = ArgumentParser(description='Reference server implementation for the OpenContest protocol')
 parser.add_argument('-v', '--verbose', action='store_true',
