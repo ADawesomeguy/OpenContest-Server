@@ -17,17 +17,6 @@ def about():
     return (200, about_server)
 
 
-def contests():
-    """Return contests on this server"""
-
-    contests = []
-    for contest in os.listdir(args.contests_dir):
-        if contest.startswith('.'):
-            continue  # Skip "hidden" contests
-        contests.append(contest)
-    return (200, json.dumps(contests))
-
-
 def info(contest, problem=None):
     """Return information about a contest"""
 
@@ -88,7 +77,7 @@ def register(name, email, username, password):
 
 def authenticate(username, password):
     """Verify username and password"""
-
+    
     users = cur.execute(
         'SELECT * FROM users WHERE username = ?', (username,)).fetchall()
     if len(users) == 0:
