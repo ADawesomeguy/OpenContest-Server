@@ -1,6 +1,6 @@
 # OpenContest Server
 
-Reference backend server implementation for the [OpenContest protocol](https://github.com/LadueCS/OpenContest) written using Python's HTTPServer and SQLite. This implementation has no external dependencies other than the Python standard library and systemd and should run on almost all modern Linux distributions.
+An [OpenContest](https://github.com/LadueCS/OpenContest) server written using Python's HTTPServer and SQLite, with no external dependencies other than the Python standard library, [requests](https://docs.python-requests.org/en/latest/), and [systemd](https://systemd.io/).
 
 ## Usage
 

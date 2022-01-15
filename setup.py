@@ -5,10 +5,10 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='opencontest-server',
-    version='2.1.0',
+    version='2.3.0',
     author='Anthony Wang',
     author_email='ta180m@pm.me',
-    description='Reference server implementation for the OpenContest protocol',
+    description='An OpenContest server written in Python ',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/LadueCS/OpenContest-Server',
