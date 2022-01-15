@@ -95,16 +95,6 @@ class Server(BaseHTTPRequestHandler):
                          'Authorization, Content-Type')
         self.end_headers()
 
-    def do_GET(self):
-        self.parse_requestfa()
-
-    def parse_requestfa(self):
-        print(999, self, dir(self), self.headers)
-        content_length = int(self.headers['Content-Length'])
-        body = json.loads(self.rfile.read(content_length).decode('utf-8'))
-        logging.debug(body)
-        return body
-
     def do_POST(self):
         """Handle POST requests"""
 
