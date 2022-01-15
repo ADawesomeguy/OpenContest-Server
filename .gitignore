@@ -1,11 +1,9 @@
 # Custom
 data
 contests
-problems
 tests
 .vscode
 .DS_Store
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
