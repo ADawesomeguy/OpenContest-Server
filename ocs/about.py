@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 import logging
 import os
 import json
 from subprocess import check_output
 
-from args import args
-from languages import languages
+from ocs.args import args
+from ocs.languages import languages
 
 
 # Construct about object

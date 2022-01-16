@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 import os
 from subprocess import run
 from requests import post
 
-from args import args
-from db import con, cur
-from languages import languages
+from ocs.args import args
+from ocs.db import con, cur
+from ocs.languages import languages
 
 
 def statement(contest, problem):

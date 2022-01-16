@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Programming language class
 # Must contain a command to get version and run code
 # Compile command is optional

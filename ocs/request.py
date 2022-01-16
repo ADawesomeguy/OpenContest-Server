@@ -1,14 +1,12 @@
-#!/usr/bin/env python3
-
 import os
 import json
 from secrets import token_hex
 
-from args import args
-from db import con, cur
-from about import about_server
-from user import hash, tokens
-from problem import statement
+from ocs.args import args
+from ocs.db import con, cur
+from ocs.about import about_server
+from ocs.user import hash, tokens
+from ocs.problem import statement
 
 
 def about():

@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
-
 import logging
 import os
 import json
 from sqlite3 import connect
 
-from args import args
+from ocs.args import args
 
 
 # Prepare database

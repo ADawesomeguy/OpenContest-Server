@@ -1,19 +1,16 @@
-#!/usr/bin/env python3
-
 import logging
 import os
 import json
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler
 from inspect import signature
 from operator import itemgetter
 from datetime import datetime
 
-from args import args
-import request
-from user import authorize_request
+import ocs.request
+from ocs.user import authorize_request
 
 
-class Server(BaseHTTPRequestHandler):
+class server(BaseHTTPRequestHandler):
     """Main HTTP server"""
 
     def send(self, result):
@@ -104,9 +101,3 @@ class Server(BaseHTTPRequestHandler):
         logging.debug(body)
 
         self.send(self.process(body))  # Process request and send back results
-
-
-# Run the server
-httpd = ThreadingHTTPServer(('localhost', args.port), Server)
-logging.info('Starting server')
-httpd.serve_forever()
