@@ -1,18 +1,13 @@
 #!/usr/bin/python
 
 import sys
+import os
 import logging
 from http.server import ThreadingHTTPServer
 
 from ocs.args import args
 from ocs.server import server
 
-
-# Verbose logging
-if args.verbose:
-    logging.basicConfig(level=logging.DEBUG)
-else:
-    logging.basicConfig(level=logging.INFO)
 
 # Make sure directories exist
 if not os.path.isdir(args.data_dir):
