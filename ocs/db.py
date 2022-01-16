@@ -1,8 +1,8 @@
 import logging
 import os
-import json
 from sqlite3 import connect
 
+from ocs.about import about, contest_info
 from ocs.args import args
 
 
@@ -13,29 +13,19 @@ con = connect(database, check_same_thread=False)
 cur = con.cursor()
 logging.info('Database connected')
 
+
 # Create user table
-cur.execute(
-    'CREATE TABLE IF NOT EXISTS users (username text unique, name text, email text unique, password text)')
+cur.execute('CREATE TABLE IF NOT EXISTS users (username text unique, name text, email text unique, password text)')
 
 
-for contest in os.listdir(args.contests_dir):
-    """Create contest status table"""
-
-    if contest.startswith('.'):
-        continue  # Skip "hidden" contests
-
-    command = 'CREATE TABLE IF NOT EXISTS "' + \
-        contest + '_status" (username text, '
-
-    problems = json.load(
-        open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
-    for problem in problems:
+for contest in about['contest']:
+    # Create contest status table
+    command = 'CREATE TABLE IF NOT EXISTS "' + contest + '_status" (username text, '
+    for problem in contest_info['problems']:
         command += '"' + problem + '" text, '
-    command = command[:-2] + ')'
-
-    cur.execute(command)
+    cur.execute(command[:-2] + ')')
 
     # Create contest submissions table
     cur.execute('CREATE TABLE IF NOT EXISTS "' + contest +
                 '_submissions" (number real, username text, problem text, code text, verdict real)')
-    con.commit()
+con.commit()

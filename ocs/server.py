@@ -1,11 +1,10 @@
 import logging
-import os
-import json
 from http.server import BaseHTTPRequestHandler
 from inspect import signature
 from datetime import datetime
 
 import ocs.request
+from ocs.about import about, contest_info
 from ocs.user import authorize_request
 
 
@@ -22,9 +21,7 @@ class server(BaseHTTPRequestHandler):
         logging.debug(body)
 
         self.send_response(code)  # Send status code
-
         self.send_header('Access-Control-Allow-Origin', '*')
-
         if body is None:
             self.end_headers()
         else:
@@ -55,31 +52,24 @@ class server(BaseHTTPRequestHandler):
 
         # Check token
         if 'token' in body and not body['type'] == 'authorize':
-            authorization = authorize_request(
-                body['username'], body['homeserver'], body['token'])
+            authorization = authorize_request(body['username'], body['homeserver'], body['token'])
             if not authorization == 200:
                 return authorization  # Not authorized
 
         # Check if contest exists
-        if 'contest' in body:
-            if not os.path.isdir(os.path.join(
-                    args.contests_dir, body['contest'])):
-                return 404  # Contest not found
+        if 'contest' in body and body['contest'] not in about['contests']
+            return 404  # Contest not found
 
         # Check if problem exists
-        if 'problem' in body:
-            info = json.load(
-                open(os.path.join(args.contests_dir, body['contest'], 'info.json'), 'r'))
-            if body['problem'] not in info['problems'] or datetime.now(
-            ).timestamp() < datetime.fromisoformat(info['start-time']).timestamp():
-                return 404  # Problem not found
+        if 'problem' in body and body['problem'] not in contest_info[body['contest']]['problems']
+            or datetime.now().timestamp() < datetime.fromisoformat(contest_info[body['contest']]['start-time']).timestamp():
+            return 404  # Problem not found
 
         # Run the corresponding function and send the results
         if parameters == '':
             return eval('request.' + body['type'] + '()')
         else:
-            return eval(
-                'request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
+            return eval('request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
 
     def do_OPTIONS(self):
         """Handle CORS"""
@@ -87,8 +77,7 @@ class server(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers',
-                         'Authorization, Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
         self.end_headers()
 
     def do_POST(self):

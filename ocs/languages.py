@@ -8,7 +8,6 @@ class language:
         self.compile = compile
 
 
-# TODO: Support more languages
 languages = {
     # Language       Version                                     Run             Compile
     'cpp':  language('g++ --version | head -n1 | cut -d" " -f3', './main',       'g++ main.cpp -o main -O2'),

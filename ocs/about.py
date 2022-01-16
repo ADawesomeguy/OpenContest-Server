@@ -7,22 +7,28 @@ from ocs.args import args
 from ocs.languages import languages
 
 
-# Construct about object
-about_server = {'version': check_output('git describe --long --tags | \
-                sed \'s/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g\'', shell=True).decode('utf-8'),
-                'languages': {}, 'contests': []}
+about = {'version': check_output('git describe --long --tags | sed \'s/^v//;s/\\([^-]*-g\\\
+         )/r\\1/;s/-/./g\'', shell=True).decode('utf-8'), 'languages': {}, 'contests': []}
+contest_info = {}
+problem_info = {}
+
 
 # Get language versions
 for name, description in languages.items():
-    about_server['languages'][name] = check_output(
-        description.version, shell=True).decode('utf-8')[:-1]
+    about['languages'][name] = check_output(description.version, shell=True).decode('utf-8')[:-1]
 
-# Get contests
+
+# Save information
 for contest in os.listdir(args.contests_dir):
-    if contest.startswith('.'):
-        continue  # Skip "hidden" contests
-    about_server['contests'].append(contest)
+    about['contests'].append(contest)
+    contest_info[contest] = json.load(open(os.join(args.contest_dir, contest, 'info.json'), 'r'))
+    problem_info[contest] = {}
+    for problem in contest_info[contest]['problems']:
+        problem_info[contest][problem] = json.load(open(os.join(
+            args.contest_dir, contest, problem, 'info.json'), 'r'))
 
-# Convert to JSON
-about_server = json.dumps(about_server)
-logging.debug(about_server)
+
+# Logging
+logging.debug(about)
+logging.debug(contest_info)
+logging.debug(problem_info)
