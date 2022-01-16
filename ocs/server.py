@@ -3,7 +3,6 @@ import os
 import json
 from http.server import BaseHTTPRequestHandler
 from inspect import signature
-from operator import itemgetter
 from datetime import datetime
 
 import ocs.request
