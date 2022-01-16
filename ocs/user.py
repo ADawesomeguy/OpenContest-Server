@@ -1,5 +1,5 @@
-import hashlib
-import requests
+from hashlib import pbkdf2_hmac
+from requests import post
 
 
 tokens = {}  # Create tokens object
@@ -8,11 +8,10 @@ tokens = {}  # Create tokens object
 def hash(password, salt):
     """Hash password with salt"""
 
-    return salt + hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return salt + pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
 
 
 def authorize_request(username, homeserver, token):
     """Request an authorization"""
 
-    return requests.post('https://' + homeserver, json={
-                         'type': 'authorize', 'username': username, 'token': token}).status_code
+    return post('https://' + homeserver, json={'type': 'authorize', 'username': username, 'token': token}).status_code
