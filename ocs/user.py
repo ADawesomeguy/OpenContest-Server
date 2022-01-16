@@ -2,7 +2,7 @@ import hashlib
 import requests
 
 
-tokens = dict()  # Create tokens object
+tokens = {}  # Create tokens object
 
 
 def hash(password, salt):
@@ -15,7 +15,4 @@ def authorize_request(username, homeserver, token):
     """Request an authorization"""
 
     return requests.post('https://' + homeserver, json={
-        'type': 'authorize',
-        'username': username,
-        'token': token
-    }).status_code
+                         'type': 'authorize', 'username': username, 'token': token}).status_code
