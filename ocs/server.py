@@ -42,6 +42,7 @@ class server(BaseHTTPRequestHandler):
             return 500  # Not implemented
 
         # Check if all required parameters are in the request
+        # TODO: Make this more robust
         parameters = str(signature(eval('ocs.request.' + body['type'])))[1:-1]
         for parameter in parameters.split():
             if 'None' in parameter:  # Optional parameter

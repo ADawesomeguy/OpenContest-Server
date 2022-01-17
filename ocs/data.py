@@ -7,8 +7,9 @@ from ocs.args import args
 from ocs.languages import languages
 
 
+# Store data about server, contests, and problems
 about_data = {'version': check_output('git describe --long --tags | sed \'s/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g\'',
-         shell=True).decode('utf-8'), 'languages': {}, 'contests': []}
+              shell=True).decode('utf-8'), 'languages': {}, 'contests': []}
 contest_data = {}
 problem_data = {}
 
@@ -28,7 +29,7 @@ for contest in os.listdir(args.contests_dir):
             args.contests_dir, contest, problem, 'info.json'), 'r'))
 
 
-# Logging
+# Log data
 logging.debug(about_data)
 logging.debug(contest_data)
 logging.debug(problem_data)

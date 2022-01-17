@@ -7,9 +7,7 @@ from ocs.args import args
 
 
 # Prepare database
-database = os.path.join(args.data_dir, 'ocs.db')
-logging.debug(database)
-con = connect(database, check_same_thread=False)
+con = connect(os.path.join(args.data_dir, 'ocs.db'), check_same_thread=False)
 cur = con.cursor()
 logging.info('Database connected')
 
