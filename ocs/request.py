@@ -83,7 +83,7 @@ def authorize(username, token):
 def submit(username, homeserver, token, contest, problem, language, code):
     """Process a code submission"""
 
-    return process(username, contest, problem, language, code)
+    return process(username, homeserver, token, contest, problem, language, code)
 
 
 def status(username, homeserver, token, contest, problem=None):

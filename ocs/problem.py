@@ -21,7 +21,7 @@ def statement(contest, problem):
         return post(server, json={'type': problem, 'contest': contest, 'problem': problem.split('@')[0]}).text
 
 
-def process(username, contest, problem, language, code):
+def process(username, homeserver, token, contest, problem, language, code):
     """Process a submission"""
 
     number = int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0])
@@ -30,7 +30,7 @@ def process(username, contest, problem, language, code):
         verdict = run_local(contest, problem, language, code, number)
         rmtree(os.path.join('/tmp', str(number)))  # Clean up
     else:  # Remote
-        verdict = run_remote(contest, problem, language, code, number)
+        verdict = run_remote(username, homeserver, token, problem, language, code, number)
 
     logging.info(verdict)
 
@@ -91,11 +91,9 @@ def run_local(contest, problem, language, code, number):
     return 202  # All correct!
 
 
-def run_remote(contest, problem, language, code, number):
+def run_remote(username, homeserver, token, problem, language, code, number):
     """Run a program remotely"""
 
-    server = problem.split('@')[1]
-    token = make_token(username)
-    post(server, json={
-        'type': 'submit', 'username': username, 'homeserver': homeserver, 'token': token, 
-    })
+    problem, contest, server = problem.split(':')
+    return post(server, json={'type': 'submit', 'username': username, 'homeserver': homeserver, 'token': token,
+                'contest': contest, 'problem': problem, 'code': code, 'number': number}).statuscode
