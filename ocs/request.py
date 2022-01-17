@@ -21,7 +21,7 @@ def info(contest, problem=None):
     return (200, json.dumps(problem_data[contest][problem]))
 
 
-def problem(contest, problem=None):
+def statement(contest, problem=None):
     """Returns a problems statement"""
 
     return (200, statement(contest, problem))
@@ -44,11 +44,11 @@ def history(contest, problem=None):
     """Return submissions history"""
 
     if problem is None:
-        return (200, cur.execute(
-            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions"').fetchall())
+        return (200, str(cur.execute(
+            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions"').fetchall()))
     else:
-        return (200, cur.execute(
-            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall())
+        return (200, str(cur.execute(
+            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall()))
 
 
 def register(name, email, username, password):
@@ -85,30 +85,31 @@ def authorize(username, token):
 def submit(username, homeserver, token, contest, problem, language, code):
     """Process a code submission"""
 
-    return process(contest, problem, language, code)
+    return process(username, contest, problem, language, code)
 
 
 def status(username, homeserver, token, contest, problem=None):
     """Return user status"""
 
     if problem is None:
-        return (200, cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ?', (username,)).fetchall())
-    return (200, cur.execute('SELECT * FROM ' + contest +
-            '_status WHERE username = ? AND problem = ?', (username, problem)).fetchall())
+        return (200, str(cur.execute('SELECT * FROM "' + contest + '_status" WHERE username = ?', (username,)).fetchall()))
+    return (200, str(cur.execute('SELECT * FROM "' + contest +
+            '_status" WHERE username = ? AND problem = ?', (username, problem)).fetchall()))
 
 
 def submissions(username, homeserver, token, contest, problem=None):
     """Return user submission history"""
 
     if problem is None:
-        return (200, cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
-                                 '_submissions WHERE username = ?', (username,)).fetchall())
-    return (200, cur.execute('SELECT "number","problem","verdict" FROM ' + contest +
-            '_submissions WHERE username = ? AND problem = ?', (username, problem)).fetchall())
+        return (200, str(cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
+                                 '_submissions" WHERE username = ?', (username,)).fetchall()))
+    return (200, str(cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
+            '_submissions" WHERE username = ? AND problem = ?', (username, problem)).fetchall()))
 
 
-def code(username, homeserver, token, contest, number):
+def code(username, homeserver, token, contest, problem, number):
     """Return the code for a particular submission"""
 
-    return (200, cur.execute('SELECT "code" FROM ' + contest +
-                             '_submissions WHERE username = ? AND number = ?', (username, number)).fetchone()[0])
+    # TODO: Check if number actually exists
+    return (200, cur.execute('SELECT "code" FROM "' + contest +
+            '_submissions" WHERE username = ? AND number = ?', (username, number)).fetchone()[0])
