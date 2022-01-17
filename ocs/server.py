@@ -1,10 +1,11 @@
 import logging
+from json import loads
 from http.server import BaseHTTPRequestHandler
 from inspect import signature
 from datetime import datetime
 
 import ocs.request
-from ocs.about import about, contest_info
+from ocs.data import about_data, contest_data
 from ocs.user import authorize_request
 
 
@@ -37,11 +38,11 @@ class server(BaseHTTPRequestHandler):
 
         if 'type' not in body:
             return 400  # Bad request
-        if body['type'] not in dir(request):
+        if body['type'] not in dir(ocs.request):
             return 500  # Not implemented
 
         # Check if all required parameters are in the request
-        parameters = str(signature(eval('request.' + body['type'])))[1:-1]
+        parameters = str(signature(eval('ocs.request.' + body['type'])))[1:-1]
         for parameter in parameters.split():
             if 'None' in parameter:  # Optional parameter
                 if parameter.replace('=None', '') not in body:
@@ -57,19 +58,19 @@ class server(BaseHTTPRequestHandler):
                 return authorization  # Not authorized
 
         # Check if contest exists
-        if 'contest' in body and body['contest'] not in about['contests']
+        if 'contest' in body and body['contest'] not in about_data['contests']:
             return 404  # Contest not found
 
         # Check if problem exists
-        if 'problem' in body and body['problem'] not in contest_info[body['contest']]['problems']
-            or datetime.now().timestamp() < datetime.fromisoformat(contest_info[body['contest']]['start-time']).timestamp():
+        if 'problem' in body and body['problem'] not in contest_data[body['contest']]['problems'] and \
+            datetime.now().timestamp() < datetime.fromisoformat(contest_data[body['contest']]['start-time']).timestamp():
             return 404  # Problem not found
 
         # Run the corresponding function and send the results
         if parameters == '':
-            return eval('request.' + body['type'] + '()')
+            return eval('ocs.request.' + body['type'] + '()')
         else:
-            return eval('request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
+            return eval('ocs.request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
 
     def do_OPTIONS(self):
         """Handle CORS"""
@@ -85,7 +86,7 @@ class server(BaseHTTPRequestHandler):
 
         # Decode request body
         content_length = int(self.headers['Content-Length'])
-        body = json.loads(self.rfile.read(content_length).decode('utf-8'))
+        body = loads(self.rfile.read(content_length).decode('utf-8'))
         logging.debug(body)
 
         self.send(self.process(body))  # Process request and send back results

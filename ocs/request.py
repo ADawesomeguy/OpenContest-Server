@@ -3,8 +3,8 @@ import json
 from secrets import token_hex
 
 from ocs.args import args
+from ocs.data import about_data, contest_data, problem_data
 from ocs.db import con, cur
-from ocs.about import about, contest_info, problem_info
 from ocs.user import hash, tokens
 from ocs.problem import statement
 
@@ -12,15 +12,15 @@ from ocs.problem import statement
 def about():
     """Return information about this OpenContest server"""
 
-    return (200, json.dumps(about))
+    return (200, json.dumps(about_data))
 
 
 def info(contest, problem=None):
     """Return information about a contest"""
 
     if problem is None:
-        return (200, json.dumps(contest_info[contest]))
-    return (200, json.dumps(problem_info[contest][problem]))
+        return (200, json.dumps(contest_data[contest]))
+    return (200, json.dumps(problem_data[contest][problem]))
 
 
 def problem(contest, problem=None):
@@ -33,7 +33,7 @@ def solves(contest, problem=None):
     """Return number of solves for each problem"""
     if problem is None:
         solves = {}
-        for problem in contest_info[contest]
+        for problem in contest_data[contest]:
             solves[problem] = cur.execute(
                 'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0]
         return (200, json.dumps(solves))

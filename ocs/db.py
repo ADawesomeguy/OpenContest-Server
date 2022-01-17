@@ -2,7 +2,7 @@ import logging
 import os
 from sqlite3 import connect
 
-from ocs.about import about, contest_info
+from ocs.data import about_data, contest_data
 from ocs.args import args
 
 
@@ -18,10 +18,10 @@ logging.info('Database connected')
 cur.execute('CREATE TABLE IF NOT EXISTS users (username text unique, name text, email text unique, password text)')
 
 
-for contest in about['contest']:
+for contest in about_data['contests']:
     # Create contest status table
     command = 'CREATE TABLE IF NOT EXISTS "' + contest + '_status" (username text, '
-    for problem in contest_info['problems']:
+    for problem in contest_data[contest]['problems']:
         command += '"' + problem + '" text, '
     cur.execute(command[:-2] + ')')
 

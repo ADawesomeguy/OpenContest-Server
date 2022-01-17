@@ -3,6 +3,7 @@ from subprocess import run
 from requests import post
 
 from ocs.args import args
+from ocs.data import contest_data, problem_data
 from ocs.db import con, cur
 from ocs.languages import languages
 
@@ -40,15 +41,8 @@ def process(contest, problem, language, code):
                 (number, username, problem, code, verdict))
 
     if cur.execute('SELECT Count(*) FROM ' + contest + '_status WHERE username = ?', (username,)).fetchone()[0] == 0:
-        command = 'INSERT INTO ' + contest + \
-            '_status VALUES ("' + username + '", '
-
-        problems = json.load(
-            open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))['problems']
-        for problem in problems:
-            command += '0, '
-        command = command[:-2] + ')'
-        cur.execute(command)
+        command = 'INSERT INTO ' + contest + '_status VALUES ("' + username + '", ' + '0, ' * len(contest_data[contest]['problems'])
+        cur.execute(command[:-2] + ')')
 
     cur.execute('UPDATE ' + contest + '_status SET ' + problem +
                 ' = ? WHERE username = ?', (str(verdict), username,))
@@ -79,10 +73,8 @@ def run_local(contest, problem, language, code, number):
             return 500
 
     tcdir = os.path.join(args.contest_dir, contest, problem)
-    with open(os.path.join(tcdir, 'config.json')) as f:
-        config = json.loads(f.read())
-        time_limit = config['time-limit']
-        memory_limit = config['memory-limit']
+    time_limit = problem_data[contest][problem]['time-limit']
+    memory_limit = problem_data[contest][problem]['memory-limit']
 
     tc = 1
     while os.path.isfile(os.path.join(tcdir, str(tc) + '.in')):
