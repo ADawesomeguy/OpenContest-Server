@@ -18,12 +18,12 @@ cur.execute('CREATE TABLE IF NOT EXISTS users (username text unique, name text, 
 
 for contest in about_data['contests']:
     # Create contest status table
-    command = 'CREATE TABLE IF NOT EXISTS "' + contest + '_status" (username text, '
+    command = 'CREATE TABLE IF NOT EXISTS "' + contest + '_status" (username text, homeserver text, '
     for problem in contest_data[contest]['problems']:
         command += '"' + problem + '" text, '
     cur.execute(command[:-2] + ')')
 
     # Create contest submissions table
     cur.execute('CREATE TABLE IF NOT EXISTS "' + contest +
-                '_submissions" (number real, username text, problem text, code text, verdict real)')
+                '_submissions" (number real, username text, homeserver text, problem text, code text, verdict real)')
 con.commit()

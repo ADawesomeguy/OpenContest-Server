@@ -44,11 +44,10 @@ def history(contest, problem=None):
     """Return submissions history"""
 
     if problem is None:
-        return (200, str(cur.execute(
-            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions"').fetchall()))
-    else:
-        return (200, str(cur.execute(
-            'SELECT "number","problem","verdict" FROM "' + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall()))
+        return (200, str(cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
+                + contest + '_submissions"').fetchall()))
+    return (200, str(cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
+            + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall()))
 
 
 def register(name, email, username, password):
@@ -92,9 +91,10 @@ def status(username, homeserver, token, contest, problem=None):
     """Return user status"""
 
     if problem is None:
-        return (200, str(cur.execute('SELECT * FROM "' + contest + '_status" WHERE username = ?', (username,)).fetchall()))
+        return (200, str(cur.execute('SELECT * FROM "' + contest +
+                '_status" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall()))
     return (200, str(cur.execute('SELECT * FROM "' + contest +
-            '_status" WHERE username = ? AND problem = ?', (username, problem)).fetchall()))
+            '_status" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall()))
 
 
 def submissions(username, homeserver, token, contest, problem=None):
@@ -102,9 +102,9 @@ def submissions(username, homeserver, token, contest, problem=None):
 
     if problem is None:
         return (200, str(cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
-                                 '_submissions" WHERE username = ?', (username,)).fetchall()))
-    return (200, str(cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
-            '_submissions" WHERE username = ? AND problem = ?', (username, problem)).fetchall()))
+                '_submissions" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall()))
+    return (200, str(cur.execute('SELECT "number","verdict" FROM "' + contest +
+            '_submissions" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall()))
 
 
 def code(username, homeserver, token, contest, number):
@@ -113,4 +113,4 @@ def code(username, homeserver, token, contest, number):
     if number > int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0]):
         return 404
     return (200, cur.execute('SELECT "code" FROM "' + contest +
-            '_submissions" WHERE username = ? AND number = ?', (username, number)).fetchone()[0])
+            '_submissions" WHERE username = ? AND homeserver = ? AND number = ?', (username, homeserver, number)).fetchone()[0])

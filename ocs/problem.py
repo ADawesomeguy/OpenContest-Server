@@ -34,15 +34,16 @@ def process(username, contest, problem, language, code):
     logging.info(verdict)
 
     # Update submissions table
-    cur.execute('INSERT INTO "' + contest + '_submissions" VALUES (?, ?, ?, ?, ?)',
-                (number, username, problem, code, verdict))
+    cur.execute('INSERT INTO "' + contest + '_submissions" VALUES (?, ?, ?, ?, ?, ?)',
+                (number, username, homeserver, problem, code, verdict))
 
     # Update status table
-    if cur.execute('SELECT Count(*) FROM "' + contest + '_status" WHERE username = ?', (username,)).fetchone()[0] == 0:
+    if cur.execute('SELECT Count(*) FROM "' + contest + '_status" WHERE username = ? AND homeserver = ?',
+        (username, homeserver)).fetchone()[0] == 0:
         cur.execute('INSERT INTO "' + contest + '_status" VALUES ("' + username + '", ' +
                     '0, ' * (len(contest_data[contest]['problems']) - 1) + '0)')
     cur.execute('UPDATE "' + contest + '_status" SET ' + problem +
-                ' = ? WHERE username = ?', (str(verdict), username,))
+                ' = ? WHERE username = ? AND homeserver = ?', (str(verdict), username, homeserver))
     
     con.commit()
 
