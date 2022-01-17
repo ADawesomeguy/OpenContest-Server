@@ -46,7 +46,9 @@ class server(BaseHTTPRequestHandler):
         for parameter in parameters.split():
             if 'None' in parameter:  # Optional parameter
                 if parameter.replace('=None', '') not in body:
-                    parameters = parameters.replace(parameter, '')  # Remove it
+                    parameters = parameters.replace(', ' + parameter, '')  # Remove it
+                else:
+                    parameters = parameters.replace('=None', '')
             else:
                 if parameter.replace(',', '') not in body:
                     return 400  # Bad request
@@ -62,8 +64,8 @@ class server(BaseHTTPRequestHandler):
             return 404  # Contest not found
 
         # Check if problem exists
-        if 'problem' in body and body['problem'] not in contest_data[body['contest']]['problems'] and \
-            datetime.now().timestamp() < datetime.fromisoformat(contest_data[body['contest']]['start-time']).timestamp():
+        if 'problem' in body and (body['problem'] not in contest_data[body['contest']]['problems'] or
+            datetime.now().timestamp() < datetime.fromisoformat(contest_data[body['contest']]['start-time']).timestamp()):
             return 404  # Problem not found
 
         # Run the corresponding function and send the results
