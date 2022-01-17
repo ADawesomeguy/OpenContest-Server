@@ -57,8 +57,8 @@ class server(BaseHTTPRequestHandler):
         # Check token
         if 'token' in body and not body['type'] == 'authorize':
             authorization = check_token(body['username'], body['token'])
-            if not authorization == 200:
-                return authorization  # Not authorized
+            if not authorization:
+                return 404  # Token not found
 
         # Check if contest exists
         if 'contest' in body and body['contest'] not in about_data['contests']:
