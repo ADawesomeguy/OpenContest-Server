@@ -107,7 +107,7 @@ def submissions(username, homeserver, token, contest, problem=None):
             '_submissions" WHERE username = ? AND problem = ?', (username, problem)).fetchall()))
 
 
-def code(username, homeserver, token, contest, problem, number):
+def code(username, homeserver, token, contest, number):
     """Return the code for a particular submission"""
 
     if number > int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0]):
