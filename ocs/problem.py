@@ -14,11 +14,11 @@ from ocs.user import make_token
 def statement(contest, problem):
     """Get problem statement of local or remote problem"""
 
-    if '@' not in problem:  # Local
+    if ':' not in problem:  # Local
         return open(os.path.join(args.contests_dir, contest, problem, 'problem.pdf'), 'rb').read()
     else:  # Remote
-        server = problem.split('@')[1]
-        return post(server, json={'type': problem, 'contest': contest, 'problem': problem.split('@')[0]}).text
+        problem, contest, server = problem.split(':')
+        return post(server, json={'type': 'statement', 'contest': contest, 'problem': problem}).text
 
 
 def process(username, homeserver, token, contest, problem, language, code):
