@@ -89,8 +89,8 @@ def status(username, homeserver, token, contest, problem=None):
     if problem is None:
         return (200, cur.execute('SELECT * FROM "' + contest +
                 '_status" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall())
-    return (200, cur.execute('SELECT * FROM "' + contest +
-            '_status" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall())
+    return (200, cur.execute('SELECT "' + problem + '" FROM "' + contest +
+            '_status" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall())
 
 
 def submissions(username, homeserver, token, contest, problem=None):
@@ -106,7 +106,7 @@ def submissions(username, homeserver, token, contest, problem=None):
 def code(username, homeserver, token, contest, number):
     """Get the code for a particular submission"""
 
-    if number > int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0]):
+    if int(number) > int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0]):
         return 404
     return (200, cur.execute('SELECT "code" FROM "' + contest +
             '_submissions" WHERE username = ? AND homeserver = ? AND number = ?', (username, homeserver, number)).fetchone()[0])
