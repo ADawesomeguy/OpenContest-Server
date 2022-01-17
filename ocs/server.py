@@ -1,5 +1,5 @@
 import logging
-from json import loads
+from json import loads, dumps
 from http.server import BaseHTTPRequestHandler
 from inspect import signature
 from datetime import datetime
@@ -26,8 +26,7 @@ class server(BaseHTTPRequestHandler):
         if body is None:
             self.end_headers()
         else:
-            if isinstance(body, str):
-                body = body.encode('utf-8')
+            body = dumps(body)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()

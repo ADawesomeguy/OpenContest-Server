@@ -31,7 +31,6 @@ for contest in os.listdir(args.contests_dir):
 
 
 # Log data
-# TODO: Convert all to JSON here to avoid doing it for each request
 logging.debug(about_data)
 logging.debug(contest_data)
 logging.debug(problem_data)

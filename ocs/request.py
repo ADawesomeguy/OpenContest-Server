@@ -1,5 +1,4 @@
 import os
-import json
 
 from ocs.data import about_data, contest_data, problem_data
 from ocs.db import con, cur
@@ -10,15 +9,15 @@ from ocs.problem import statement, process
 def about():
     """Get information about this OpenContest server"""
 
-    return (200, json.dumps(about_data))
+    return (200, about_data)
 
 
 def info(contest, problem=None):
     """Get information about a contest or problem"""
 
     if problem is None:
-        return (200, json.dumps(contest_data[contest]))
-    return (200, json.dumps(problem_data[contest][problem]))
+        return (200, contest_data[contest])
+    return (200, problem_data[contest][problem])
 
 
 def statement(contest, problem=None):
@@ -35,8 +34,7 @@ def solves(contest, problem=None):
         for problem in contest_data[contest]:
             solves[problem] = cur.execute(
                 'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0]
-        return (200, json.dumps(solves))
-    # TODO: Return JSON
+        return (200, solves)
     return (200, cur.execute(
         'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0])
 
@@ -44,12 +42,11 @@ def solves(contest, problem=None):
 def history(contest, problem=None):
     """Get submissions history"""
 
-    # TODO: Return JSON
     if problem is None:
-        return (200, str(cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
-                + contest + '_submissions"').fetchall()))
-    return (200, str(cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
-            + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall()))
+        return (200, cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
+                + contest + '_submissions"').fetchall())
+    return (200, cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
+            + contest + '_submissions" WHERE problem = ?', (problem,)).fetchall())
 
 
 def register(name, email, username, password):
@@ -89,23 +86,21 @@ def submit(username, homeserver, token, contest, problem, language, code):
 def status(username, homeserver, token, contest, problem=None):
     """Get user status"""
 
-    # TODO: Return JSON
     if problem is None:
-        return (200, str(cur.execute('SELECT * FROM "' + contest +
-                '_status" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall()))
-    return (200, str(cur.execute('SELECT * FROM "' + contest +
-            '_status" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall()))
+        return (200, cur.execute('SELECT * FROM "' + contest +
+                '_status" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall())
+    return (200, cur.execute('SELECT * FROM "' + contest +
+            '_status" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall())
 
 
 def submissions(username, homeserver, token, contest, problem=None):
     """Get user submission history"""
 
-    # TODO: Return JSON
     if problem is None:
-        return (200, str(cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
-                '_submissions" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall()))
-    return (200, str(cur.execute('SELECT "number","verdict" FROM "' + contest +
-            '_submissions" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall()))
+        return (200, cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
+                '_submissions" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall())
+    return (200, cur.execute('SELECT "number","verdict" FROM "' + contest +
+            '_submissions" WHERE username = ? AND homeserver = ? AND problem = ?', (username, homeserver, problem)).fetchall())
 
 
 def code(username, homeserver, token, contest, number):
