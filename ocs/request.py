@@ -8,13 +8,13 @@ from ocs.problem import statement, process
 
 
 def about():
-    """Return information about this OpenContest server"""
+    """Get information about this OpenContest server"""
 
     return (200, json.dumps(about_data))
 
 
 def info(contest, problem=None):
-    """Return information about a contest"""
+    """Get information about a contest or problem"""
 
     if problem is None:
         return (200, json.dumps(contest_data[contest]))
@@ -22,13 +22,13 @@ def info(contest, problem=None):
 
 
 def statement(contest, problem=None):
-    """Returns a problems statement"""
+    """Get problems statements"""
 
     return (200, statement(contest, problem))
 
 
 def solves(contest, problem=None):
-    """Return number of solves for each problem"""
+    """Get the number of solves for each problem"""
 
     if problem is None:
         solves = {}
@@ -42,7 +42,7 @@ def solves(contest, problem=None):
 
 
 def history(contest, problem=None):
-    """Return submissions history"""
+    """Get submissions history"""
 
     # TODO: Return JSON
     if problem is None:
@@ -87,7 +87,7 @@ def submit(username, homeserver, token, contest, problem, language, code):
 
 
 def status(username, homeserver, token, contest, problem=None):
-    """Return user status"""
+    """Get user status"""
 
     # TODO: Return JSON
     if problem is None:
@@ -98,7 +98,7 @@ def status(username, homeserver, token, contest, problem=None):
 
 
 def submissions(username, homeserver, token, contest, problem=None):
-    """Return user submission history"""
+    """Get user submission history"""
 
     # TODO: Return JSON
     if problem is None:
@@ -109,7 +109,7 @@ def submissions(username, homeserver, token, contest, problem=None):
 
 
 def code(username, homeserver, token, contest, number):
-    """Return the code for a particular submission"""
+    """Get the code for a particular submission"""
 
     if number > int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0]):
         return 404
