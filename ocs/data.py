@@ -7,6 +7,7 @@ from ocs.args import args
 from ocs.languages import languages
 
 
+# TODO: Run this code every time the data changes
 # Store data about server, contests, and problems
 about_data = {'version': check_output('git describe --long --tags | sed \'s/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g\'',
               shell=True).decode('utf-8'), 'languages': {}, 'contests': []}
@@ -30,6 +31,7 @@ for contest in os.listdir(args.contests_dir):
 
 
 # Log data
+# TODO: Convert all to JSON here to avoid doing it for each request
 logging.debug(about_data)
 logging.debug(contest_data)
 logging.debug(problem_data)
