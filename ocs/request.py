@@ -31,6 +31,7 @@ def problem(contest, problem=None):
 
 def solves(contest, problem=None):
     """Return number of solves for each problem"""
+
     if problem is None:
         solves = {}
         for problem in contest_data[contest]:
@@ -101,7 +102,8 @@ def status(username, homeserver, token, contest, problem=None):
 
     if problem is None:
         return (200, cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ?', (username,)).fetchall())
-    return (200, cur.execute('SELECT * FROM ' + contest + '_status WHERE username = ? AND problem = ?', (username, problem)).fetchall())
+    return (200, cur.execute('SELECT * FROM ' + contest +
+            '_status WHERE username = ? AND problem = ?', (username, problem)).fetchall())
 
 
 def submissions(username, homeserver, token, contest, problem=None):

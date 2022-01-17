@@ -11,6 +11,7 @@ from ocs.server import server
 
 def main():
     """Run the server"""
+    
     httpd = ThreadingHTTPServer(('localhost', args.port), server)
     logging.info('Starting server')
     httpd.serve_forever()
