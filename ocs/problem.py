@@ -75,8 +75,8 @@ def run_local(contest, problem, language, code, number):
     while os.path.isfile(os.path.join(tcdir, str(tc) + '.in')):
         # Run test case
         # TODO: Strengthen sandbox
-        ret = run('firejail --noprofile --net=none --rlimit-cpu={} --rlimit-as={}k {} < {} > out'.format(
-                  time_limit, memory_limit, languages[language].run, os.path.join(tcdir, str(tc) + '.in')), shell=True, cwd=tmpdir).returncode
+        ret = run('firejail --noprofile --net=none --blacklist={/srv,/tmp} --noblacklist={} --rlimit-cpu={} --rlimit-as={}k {} < {} > out'.format(
+                  tcdir, time_limit, memory_limit, languages[language].run, os.path.join(tcdir, str(tc) + '.in')), shell=True, cwd=tmpdir).returncode
         if not ret == 0:
             return 408  # Runtime error
 
