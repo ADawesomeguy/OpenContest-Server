@@ -6,7 +6,7 @@ from datetime import datetime
 
 import ocs.request
 from ocs.data import about_data, contest_data
-from ocs.user import authorize_request
+from ocs.user import check_token
 
 
 class server(BaseHTTPRequestHandler):
@@ -56,7 +56,7 @@ class server(BaseHTTPRequestHandler):
 
         # Check token
         if 'token' in body and not body['type'] == 'authorize':
-            authorization = authorize_request(body['username'], body['homeserver'], body['token'])
+            authorization = check_token(body['username'], body['token'])
             if not authorization == 200:
                 return authorization  # Not authorized
 

@@ -13,14 +13,21 @@ def hash(password, salt):
     return salt + pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
 
 
-def make_token(username):
+def make_token(username, server):
     """Create and return a token"""
 
     token = token_hex(32)
+    for s in server.split(':'):
+        post('https://' + s, json={'type': 'authorize', 'username': username, 'token': token})
+    return token
+
+
+def save_token(username, token):
+    """Save token"""
+
     if username not in tokens:
         tokens[username] = set()
     tokens[username].add(token)
-    return token
 
 
 def check_token(username, token):
@@ -30,9 +37,3 @@ def check_token(username, token):
         tokens[username].remove(token)
         return True
     return False
-
-
-def authorize_request(username, homeserver, token):
-    """Request an authorization of this token"""
-
-    return post('https://' + homeserver, json={'type': 'authorize', 'username': username, 'token': token}).status_code

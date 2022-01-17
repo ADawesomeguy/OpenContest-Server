@@ -62,25 +62,22 @@ def register(name, email, username, password):
     return 201
 
 
-def authenticate(username, password):
+def authenticate(username, password, server):
     """Verify username and password"""
     
     users = cur.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchall()
     if len(users) == 0:
         return 404  # Username not found
     if users[0][3] == hash(password, users[0][3][:32]):
-        return (200, make_token(username))  # Make token
+        return (200, make_token(username, server))  # Make token
     return 403  # Incorrect password
 
 
 def authorize(username, token):
-    """Verify authentication token"""
+    """Save authentication token"""
 
-    if cur.execute('SELECT Count(*) FROM users WHERE username = ?', (username,)).fetchone()[0] == 0:
-        return 404  # Username not found
-    if check_token(username, token):
-        return (200, None)  # Correct token
-    return 403  # Incorrect token
+    save_token(username, token)
+    return 200
 
 
 def submit(username, homeserver, token, contest, problem, language, code):
