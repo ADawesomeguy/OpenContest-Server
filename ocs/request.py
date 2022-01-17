@@ -36,6 +36,7 @@ def solves(contest, problem=None):
             solves[problem] = cur.execute(
                 'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0]
         return (200, json.dumps(solves))
+    # TODO: Return JSON
     return (200, cur.execute(
         'SELECT COUNT(*) FROM "' + contest + '_status" WHERE "' + problem + '" = 202').fetchone()[0])
 
@@ -43,6 +44,7 @@ def solves(contest, problem=None):
 def history(contest, problem=None):
     """Return submissions history"""
 
+    # TODO: Return JSON
     if problem is None:
         return (200, str(cur.execute('SELECT "number","username","homeserver","problem","verdict" FROM "'
                 + contest + '_submissions"').fetchall()))
@@ -90,6 +92,7 @@ def submit(username, homeserver, token, contest, problem, language, code):
 def status(username, homeserver, token, contest, problem=None):
     """Return user status"""
 
+    # TODO: Return JSON
     if problem is None:
         return (200, str(cur.execute('SELECT * FROM "' + contest +
                 '_status" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall()))
@@ -100,6 +103,7 @@ def status(username, homeserver, token, contest, problem=None):
 def submissions(username, homeserver, token, contest, problem=None):
     """Return user submission history"""
 
+    # TODO: Return JSON
     if problem is None:
         return (200, str(cur.execute('SELECT "number","problem","verdict" FROM "' + contest +
                 '_submissions" WHERE username = ? AND homeserver = ?', (username, homeserver)).fetchall()))

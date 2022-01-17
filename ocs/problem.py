@@ -8,6 +8,7 @@ from ocs.args import args
 from ocs.data import contest_data, problem_data
 from ocs.db import con, cur
 from ocs.languages import languages
+from ocs.user import make_token
 
 
 def statement(contest, problem):
@@ -91,6 +92,10 @@ def run_local(contest, problem, language, code, number):
 
 
 def run_remote(contest, problem, language, code, number):
-    """TODO: Run a program remotely"""
+    """Run a program remotely"""
 
-    pass
+    server = problem.split('@')[1]
+    token = make_token(username)
+    post(server, json={
+        'type': 'submit', 'username': username, 'homeserver': homeserver, 'token': token, 
+    })
