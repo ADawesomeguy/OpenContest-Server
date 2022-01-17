@@ -3,7 +3,7 @@ import json
 
 from ocs.data import about_data, contest_data, problem_data
 from ocs.db import con, cur
-from ocs.user import hash, make_token, check_token
+from ocs.user import hash, make_token, save_token
 from ocs.problem import statement, process
 
 
