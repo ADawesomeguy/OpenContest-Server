@@ -1,6 +1,6 @@
 # OpenContest Server
 
-An [OpenContest](https://github.com/LadueCS/OpenContest) server written using Python's HTTPServer and SQLite, with no external dependencies other than the Python standard library, [requests](https://docs.python-requests.org/en/latest/), and [systemd](https://systemd.io/).
+An [OpenContest](https://github.com/LadueCS/OpenContest) server written using Python's HTTPServer and SQLite, with no external dependencies other than the Python standard library, [requests](https://docs.python-requests.org/en/latest/), and [Firejail](https://github.com/netblue30/firejail).
 
 ## Usage
 
