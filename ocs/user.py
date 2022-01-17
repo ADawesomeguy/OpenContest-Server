@@ -17,7 +17,7 @@ def make_token(username):
 
     token = token_hex(32)
     if username not in tokens:
-        tokens[username] = {}
+        tokens[username] = set()
     tokens[username].add(token)
     return token
 
@@ -34,4 +34,4 @@ def check_token(username, token):
 def authorize_request(username, homeserver, token):
     """Request an authorization"""
 
-    return post('https://' + homeserver, json={'type': 'authorize', 'username': username, 'token': token}).status_code
+    return post(homeserver, json={'type': 'authorize', 'username': username, 'token': token}).status_code
