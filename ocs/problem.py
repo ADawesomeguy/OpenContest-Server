@@ -41,8 +41,8 @@ def process(username, homeserver, token, contest, problem, language, code):
     # Update status table
     if cur.execute('SELECT Count(*) FROM "' + contest + '_status" WHERE username = ? AND homeserver = ?',
         (username, homeserver)).fetchone()[0] == 0:
-        cur.execute('INSERT INTO "' + contest + '_status" VALUES ("' + username + '", ' +
-                    '0, ' * (len(contest_data[contest]['problems']) - 1) + '0)')
+        cur.execute('INSERT INTO "' + contest + '_status" VALUES ("' + username + '", "' + homeserver +
+                    '"' + ', 0' * len(contest_data[contest]['problems']) + ')')
     cur.execute('UPDATE "' + contest + '_status" SET ' + problem +
                 ' = ? WHERE username = ? AND homeserver = ?', (str(verdict), username, homeserver))
     
