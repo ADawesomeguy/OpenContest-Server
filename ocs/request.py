@@ -110,6 +110,7 @@ def submissions(username, homeserver, token, contest, problem=None):
 def code(username, homeserver, token, contest, problem, number):
     """Return the code for a particular submission"""
 
-    # TODO: Check if number actually exists
+    if number > int(cur.execute('SELECT Count(*) FROM "' + contest + '_submissions"').fetchone()[0]):
+        return 404
     return (200, cur.execute('SELECT "code" FROM "' + contest +
             '_submissions" WHERE username = ? AND number = ?', (username, number)).fetchone()[0])
