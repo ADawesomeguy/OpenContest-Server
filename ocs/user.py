@@ -3,6 +3,7 @@ from hashlib import pbkdf2_hmac
 from requests import post
 
 
+# TODO: Periodically clear out unused tokens
 tokens = {}  # Create tokens object
 
 
@@ -32,6 +33,6 @@ def check_token(username, token):
 
 
 def authorize_request(username, homeserver, token):
-    """Request an authorization"""
+    """Request an authorization of this token"""
 
     return post('https://' + homeserver, json={'type': 'authorize', 'username': username, 'token': token}).status_code
