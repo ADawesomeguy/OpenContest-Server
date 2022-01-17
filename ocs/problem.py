@@ -79,6 +79,7 @@ def run_local(contest, problem, language, code, number):
             return 408  # Runtime error
 
         # Diff the output with the answer
+        # TODO: Support arbitrary diff commands
         ret = run('diff -w ' + os.path.join(tmpdir, 'out') + ' ' + os.path.join(tcdir, str(tc) + '.out'), shell=True).returncode
         os.remove(os.path.join(tmpdir, 'out'))  # Delete output
         if not ret == 0:
