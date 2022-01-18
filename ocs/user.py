@@ -18,7 +18,8 @@ def make_token(username, server):
 
     token = token_hex(32)
     for s in server.split(':'):
-        post('https://' + s, json={'type': 'authorize', 'username': username, 'token': token})
+        if s != '':
+            post('https://' + s, json={'type': 'authorize', 'username': username, 'token': token})
     return token
 
 
