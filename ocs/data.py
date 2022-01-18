@@ -24,6 +24,7 @@ for name, description in languages.items():
 for contest in os.listdir(args.contests_dir):
     about_data['contests'].append(contest)
     contest_data[contest] = load(open(os.path.join(args.contests_dir, contest, 'info.json'), 'r'))
+    # TODO: Support federated problem info
     problem_data[contest] = {}
     for problem in contest_data[contest]['problems']:
         problem_data[contest][problem] = load(open(os.path.join(
