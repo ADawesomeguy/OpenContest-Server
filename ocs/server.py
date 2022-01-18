@@ -23,6 +23,8 @@ class server(BaseHTTPRequestHandler):
 
         self.send_response(code)  # Send status code
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
         if body is None:
             self.end_headers()
         else:
@@ -73,6 +75,15 @@ class server(BaseHTTPRequestHandler):
             return eval('ocs.request.' + body['type'] + '()')
         else:
             return eval('ocs.request.' + body['type'] + '(body["' + parameters.replace(', ', '"], body["') + '"])')
+
+    def do_OPTIONS(self):
+        """Handle CORS"""
+        
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+        self.end_headers()
 
     def do_POST(self):
         """Handle POST requests"""
