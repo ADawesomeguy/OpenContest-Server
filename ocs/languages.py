@@ -23,6 +23,6 @@ languages = {
     'rs':   language('rustc -V | cut -d" " -f2',                 './main',       'rustc main.rs -C opt-level=2'),
     'lua':  language('lua -v | cut -d" " -f2',                   'lua main.lua'),
     'jl':   language('julia -v | cut -d" " -f3',                 'julia main.jl'),
-    'hs':   language('ghc -V | cut -d" " -f8',                   './main',       'ghc -dynamic main.hs')
+    'hs':   language('ghc -V | cut -d" " -f8',                   './main',       'ghc -dynamic main.hs'),
     'sh':   language('bash --version | head -n1 | cut -d" " -f4','bash main.sh', 'chmod +x main.sh')
 }
