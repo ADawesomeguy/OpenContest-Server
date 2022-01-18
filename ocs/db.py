@@ -13,7 +13,7 @@ logging.info('Database connected')
 
 
 # Create user table
-cur.execute('CREATE TABLE IF NOT EXISTS users (username text unique, name text, email text unique, password text)')
+cur.execute('CREATE TABLE IF NOT EXISTS users (name text, email text unique, username text unique, password text)')
 
 
 for contest in about_data['contests']:
