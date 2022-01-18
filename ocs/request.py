@@ -3,7 +3,7 @@ import os
 from ocs.data import about_data, contest_data, problem_data
 from ocs.db import con, cur
 from ocs.user import hash, make_token, save_token
-from ocs.problem import statement, process
+from ocs.problem import process
 
 
 def about():
@@ -18,12 +18,6 @@ def info(contest, problem=None):
     if problem is None:
         return (200, contest_data[contest])
     return (200, problem_data[contest][problem])
-
-
-def statement(contest, problem=None):
-    """Get problems statements"""
-
-    return (200, statement(contest, problem))
 
 
 def solves(contest, problem=None):

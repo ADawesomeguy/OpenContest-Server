@@ -11,16 +11,6 @@ from ocs.languages import languages
 from ocs.user import make_token
 
 
-def statement(contest, problem):
-    """Get problem statement of local or remote problem"""
-
-    if ':' not in problem:  # Local
-        return open(os.path.join(args.contests_dir, contest, problem, 'problem.pdf'), 'rb').read()
-    else:  # Remote
-        problem, contest, server = problem.split(':')
-        return post(server, json={'type': 'statement', 'contest': contest, 'problem': problem}).text
-
-
 def process(username, homeserver, token, contest, problem, language, code):
     """Process a submission"""
 
