@@ -20,7 +20,7 @@ languages = {
     'pl':   language('perl -v | awk -F"[()]" \'/This/ {print $2}\' | cut -c 2-', 'perl main.pl'),
     'php':  language('php -v | head -n1 | cut -d" " -f2',        'php main.php'),
     'go':   language('go version | cut -d" " -f3 | cut -c 3-',   './main',       'go build main.go'),
-    'rs':   language('rustc -V | cut -d" " -f2',                 './main',       'rustc main.rs'),
+    'rs':   language('rustc -V | cut -d" " -f2',                 './main',       'rustc main.rs -C opt-level=2'),
     'lua':  language('lua -v | cut -d" " -f2',                   'lua main.lua'),
     'jl':   language('julia -v | cut -d" " -f3',                 'julia main.jl'),
     'hs':   language('ghc -V | cut -d" " -f8',                   './main',       'ghc -dynamic main.hs')
