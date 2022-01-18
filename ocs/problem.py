@@ -18,7 +18,7 @@ def process(username, homeserver, token, contest, problem, language, code):
 
     if '@' not in problem:  # Local
         verdict = run_local(contest, problem, language, code, number)
-        rmtree(os.path.join('/tmp', str(number)))  # Clean up
+        rmtree(os.path.join('/tmp',  contest, str(number)))  # Clean up
     else:  # Remote
         verdict = run_remote(username, homeserver, token, problem, language, code, number)
 
@@ -45,7 +45,7 @@ def run_local(contest, problem, language, code, number):
     """Run a program locally"""
 
     # Save the program
-    tmpdir = os.path.join('/tmp', str(number))
+    tmpdir = os.path.join('/tmp', contest, str(number))
     os.makedirs(tmpdir, exist_ok=True)
     with open(os.path.join(tmpdir, 'main.' + language), 'w') as f:
         f.write(code)
