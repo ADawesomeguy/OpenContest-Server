@@ -46,7 +46,7 @@ def run_local(contest, problem, language, code, number):
 
     # Save the program
     tmpdir = os.path.join('/tmp', str(number))
-    os.mkdir(tmpdir)
+    os.makedirs(tmpdir, exist_ok=True)
     with open(os.path.join(tmpdir, 'main.' + language), 'w') as f:
         f.write(code)
 
