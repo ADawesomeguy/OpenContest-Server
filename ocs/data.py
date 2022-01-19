@@ -10,7 +10,7 @@ from ocs.languages import languages
 # TODO: Run this code every time the data changes
 # Store data about server, contests, and problems
 about_data = {'version': check_output('git describe --long --tags | sed \'s/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g\'',
-              shell=True).decode('utf-8'), 'languages': {}, 'contests': []}
+              shell=True).decode('utf-8')[:-1], 'languages': {}, 'contests': []}
 contest_data = {}
 problem_data = {}
 
