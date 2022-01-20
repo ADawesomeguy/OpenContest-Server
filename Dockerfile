@@ -1,4 +1,4 @@
-FROM debian:sid-slim
+FROM docker.io/debian:sid-slim
 
 WORKDIR /usr/src/app
 
