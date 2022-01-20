@@ -1,11 +1,11 @@
-FROM debian:11-slim
+FROM docker.io/debian:sid-slim
 
 WORKDIR /usr/src/app
 
 COPY . .
 
-RUN apt update -y
-RUN apt install -y ghc python3 python-is-python3 python3-pip nodejs golang wget julia openjdk-11-jdk lua5.3 php ruby rustc mono-mcs
-RUN pip install --no-cache-dir requests
+RUN apt-get update -y
+RUN apt-get install -y ghc python3 python-is-python3 python3-requests nodejs golang wget julia openjdk-17-jdk lua5.4 php ruby rustc mono-mcs
+RUN apt-get clean
 
 CMD [ "python3", "-m", "ocs", "--verbose" ]
